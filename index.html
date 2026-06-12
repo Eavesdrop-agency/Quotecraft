@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quotecraft — Eavesdrop Internal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F4F3EF;--surface:#FFFFFF;--surface2:#F0EEE9;--surface3:#E6E4DE;--surface-inset:#F7F6F2;
+  --text:#16150D;--text2:#595750;--text3:#9C9A93;--text4:#C2C0B8;
+  --accent:#2748D6;--accent2:#1A36B8;--accent-bg:#EBF0FF;--accent-border:#C5D2FA;--accent-muted:#F0F4FF;
+  --gold:#B8860B;--gold-bg:#FDF8EC;--gold-border:#E8D5A3;
+  --green:#1A6E40;--green-bg:#EAF5EE;--green-border:#B8DEC8;
+  --amber:#7A4A00;--amber-bg:#FDF3E0;--amber-border:#F0D89A;
+  --red:#A91B1B;--red-bg:#FEF1F1;--red-border:#F4BFBF;
+  --purple:#5B21B6;--purple-bg:#F5F3FF;--purple-border:#DDD6FE;
+  --border:rgba(22,21,13,0.08);--border2:rgba(22,21,13,0.13);--border3:rgba(22,21,13,0.20);--border-focus:rgba(39,72,214,0.35);
+  --shadow-xs:0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,0.08),0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:0 8px 28px rgba(0,0,0,0.10),0 2px 8px rgba(0,0,0,0.05);
+  --shadow-focus:0 0 0 3px rgba(39,72,214,0.14);
+  --r-xs:4px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:18px;--r-2xl:24px;
+  --font-body:'Inter',system-ui,sans-serif;--font-display:'Outfit','Inter',system-ui,sans-serif;
+}
+html{font-size:14px;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+
+/* ── Layout ── */
+.app{display:flex;min-height:100vh}
+.sidebar{width:232px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:36px 36px 56px}
+
+/* ── Sidebar ── */
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.sb-logo-mark{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-logo-name{font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:-0.3px;color:var(--text)}
+.sb-logo-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.sb-nav{padding:8px;flex:1}
+.sb-section{font-size:10px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--text4);padding:16px 8px 5px}
+.sb-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--r-sm);cursor:pointer;font-size:13px;color:var(--text3);font-weight:400;transition:background 0.1s,color 0.1s;user-select:none;margin-bottom:1px}
+.sb-item:hover{background:var(--surface2);color:var(--text2)}
+.sb-item.active{background:var(--accent-muted);color:var(--accent);font-weight:500}
+.sb-item svg{width:14px;height:14px;flex-shrink:0;opacity:0.65}
+.sb-item.active svg{opacity:1}
+.sb-client-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.sb-footer{padding:10px;border-top:1px solid var(--border)}
+.sb-user-info{padding:8px 9px;font-size:11.5px;color:var(--text3)}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r-sm);font-size:13px;font-weight:500;font-family:var(--font-body);cursor:pointer;border:1px solid transparent;transition:background 0.1s,border-color 0.1s,box-shadow 0.1s,transform 0.08s;user-select:none;white-space:nowrap;line-height:1.4;outline:none}
+.btn svg{width:13px;height:13px;flex-shrink:0}
+.btn:active{transform:scale(0.98)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent2);border-color:var(--accent2)}
+.btn-secondary{background:var(--surface);color:var(--text);border-color:var(--border3)}
+.btn-secondary:hover{background:var(--surface2)}
+.btn-ghost{background:transparent;color:var(--text2);border-color:transparent}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-danger-ghost{background:transparent;color:var(--red);border-color:transparent;padding:4px 7px;font-size:11.5px}
+.btn-danger-ghost:hover{background:var(--red-bg)}
+.btn-success{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-success:hover{opacity:0.9}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-full{width:100%;justify-content:center}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none!important}
+
+/* ── Screens ── */
+.screen{display:none}
+.screen.active{display:block;animation:fadeUp 0.18s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px 24px;box-shadow:var(--shadow-xs)}
+.card+.card{margin-top:14px}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:12px}
+.card-title{font-size:13.5px;font-weight:600;color:var(--text);letter-spacing:-0.1px}
+.card-sub{font-size:12px;color:var(--text3);margin-top:3px}
+
+/* ── Page headers ── */
+.page-header{margin-bottom:28px}
+.page-title{font-family:var(--font-body);font-weight:600;font-size:22px;color:var(--text);line-height:1.2;letter-spacing:-0.4px;margin-bottom:5px}
+.page-sub{font-size:13.5px;color:var(--text3);line-height:1.5}
+
+/* ── Forms ── */
+.form-group{margin-bottom:16px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label{display:block;font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:5px;letter-spacing:0.025em}
+input[type=text],input[type=number],input[type=password],select,textarea{width:100%;padding:8px 11px;border:1px solid var(--border3);border-radius:var(--r-sm);font-size:13.5px;font-family:var(--font-body);color:var(--text);background:var(--surface);outline:none;transition:border-color 0.12s,box-shadow 0.12s;-webkit-appearance:none;appearance:none;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:var(--shadow-focus)}
+input::placeholder,textarea::placeholder{color:var(--text4)}
+textarea{resize:vertical;min-height:80px;line-height:1.6}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239C9A93' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;cursor:pointer}
+
+/* ── Topbar ── */
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text3)}
+.breadcrumb strong{color:var(--text);font-weight:500}
+.breadcrumb-sep{color:var(--text4)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+
+/* ── Stats ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 20px;box-shadow:var(--shadow-xs)}
+.stat-label{font-size:11px;color:var(--text3);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:6px}
+.stat-value{font-family:var(--font-display);font-weight:600;font-size:24px;color:var(--text);line-height:1.1;letter-spacing:-0.5px}
+.stat-sub{font-size:11.5px;color:var(--text3);margin-top:4px}
+
+/* ── Quote rows ── */
+.quote-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:13px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:border-color 0.12s,box-shadow 0.12s,transform 0.1s;box-shadow:var(--shadow-xs);margin-bottom:6px}
+.quote-row:hover{border-color:var(--accent-border);box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+.q-num{font-size:11.5px;color:var(--text3);font-weight:600;min-width:78px;letter-spacing:0.02em}
+.q-client{font-weight:600;font-size:13.5px;flex:1.2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.q-title{font-size:12.5px;color:var(--text3);flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.q-amount{font-family:var(--font-display);font-weight:600;font-size:15px;color:var(--text);min-width:90px;text-align:right}
+.q-date{font-size:11.5px;color:var(--text4);min-width:70px;text-align:right}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--r-xs);font-size:11px;font-weight:600;letter-spacing:0.025em;flex-shrink:0}
+.badge-pipeline{background:var(--amber-bg);color:var(--amber)}
+.badge-approved{background:var(--green-bg);color:var(--green)}
+.badge-fulfilled{background:var(--accent-bg);color:var(--accent)}
+.badge-grey{background:var(--surface3);color:var(--text2)}
+
+/* ── Step bar ── */
+.step-bar{display:flex;align-items:center;margin-bottom:28px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-2xl);padding:4px;gap:2px}
+.step-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:20px;cursor:pointer;transition:all 0.15s;font-size:12.5px;color:var(--text3);font-weight:400}
+.step-btn.active{background:var(--accent);color:#fff;font-weight:500}
+.step-btn.done{color:var(--green);font-weight:500}
+.step-num{width:19px;height:19px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.step-btn.active .step-num{background:#fff;color:var(--accent);border-color:transparent}
+.step-btn.done .step-num{background:var(--green);color:#fff;border-color:transparent}
+.step-label{display:none}
+@media(min-width:900px){.step-label{display:block}}
+
+/* ── Estimate/Deliverable tables ── */
+.est-table{width:100%;border-collapse:collapse;font-size:13px}
+.est-table th{text-align:left;font-size:10px;font-weight:700;color:var(--text4);letter-spacing:0.07em;text-transform:uppercase;padding:0 10px 11px;border-bottom:1.5px solid var(--border2)}
+.est-table td{padding:10px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.est-table tbody tr:last-child td{border-bottom:none}
+.est-table tbody tr:hover td{background:var(--surface-inset)}
+.est-total{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ── Summary rail ── */
+.summary-rail{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-xs);position:sticky;top:0}
+.summary-line{display:flex;align-items:baseline;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.summary-line:last-child{border-bottom:none}
+.summary-line.grand{border-top:2px solid var(--text);border-bottom:none;padding-top:13px;margin-top:5px;font-weight:600;font-size:14.5px}
+.summary-label{color:var(--text2)}
+.summary-amount{font-family:var(--font-display);font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+.summary-line.grand .summary-amount{font-size:22px;letter-spacing:-0.5px}
+
+/* ── Import tabs ── */
+.import-tabs{display:flex;gap:3px;margin-bottom:14px;background:var(--surface2);border-radius:var(--r-md);padding:3px}
+.import-tab{flex:1;padding:6px 10px;border-radius:8px;font-size:12px;font-weight:500;text-align:center;cursor:pointer;color:var(--text3);transition:all 0.1s;border:none;background:transparent;font-family:var(--font-body)}
+.import-tab.active{background:var(--surface);color:var(--accent);font-weight:600;box-shadow:var(--shadow-xs)}
+.import-panel{display:none}
+.import-panel.active{display:block;animation:fadeUp 0.15s ease}
+
+/* ── Drop zone ── */
+.drop-zone{border:1.5px dashed var(--border3);border-radius:var(--r-md);padding:26px 20px;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--surface-inset);position:relative}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:var(--accent-muted)}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:24px;margin-bottom:7px;display:block}
+.drop-text{font-size:13px;color:var(--text2)}
+.drop-text strong{color:var(--accent)}
+.drop-hint{font-size:11.5px;color:var(--text3);margin-top:4px}
+
+/* ── Parse status ── */
+.parse-status{margin-top:10px;padding:9px 13px;border-radius:var(--r-sm);font-size:12.5px;display:none}
+.parse-status.loading{display:flex;align-items:center;gap:8px;background:var(--accent-muted);color:var(--accent2)}
+.parse-status.success{display:flex;align-items:center;gap:8px;background:var(--green-bg);color:var(--green)}
+.parse-status.error{display:flex;align-items:center;gap:8px;background:var(--red-bg);color:var(--red)}
+
+/* ── Preview table ── */
+.preview-table-wrap{max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-sm);margin-top:12px}
+.preview-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.preview-table th{background:var(--surface-inset);padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--border);position:sticky;top:0}
+.preview-table td{padding:8px 12px;border-bottom:1px solid var(--border)}
+.preview-table tr:last-child td{border-bottom:none}
+.preview-table tr:hover td{background:var(--surface-inset)}
+
+/* ── Misc ── */
+.divider{height:1px;background:var(--border);margin:20px 0}
+.flow-footer{display:flex;align-items:center;justify-content:space-between;padding-top:24px;margin-top:24px;border-top:1px solid var(--border)}
+.two-col{display:flex;gap:20px;align-items:flex-start}
+.two-col-main{flex:1;min-width:0}
+.section-label{font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);margin-bottom:12px}
+.info-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.info-row:last-child{border-bottom:none}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;background:#1a1915;color:#fff;padding:10px 16px;border-radius:var(--r-md);font-size:13px;font-weight:500;z-index:9999;opacity:0;transform:translateY(6px);transition:all 0.18s;pointer-events:none;box-shadow:var(--shadow-lg)}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── Loader ── */
+.loader{display:inline-flex;gap:4px;align-items:center}
+.loader span{width:4px;height:4px;border-radius:50%;background:currentColor;animation:bounce 0.9s infinite;opacity:0.6}
+.loader span:nth-child(2){animation-delay:0.15s}
+.loader span:nth-child(3){animation-delay:0.3s}
+@keyframes bounce{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
+
+/* ── AI pill ── */
+.ai-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;background:var(--accent-muted);color:var(--accent);font-size:11px;font-weight:600;border:1px solid var(--accent-border)}
+.ai-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(22,21,13,0.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.18s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal-box{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow-lg);width:100%;max-width:600px;max-height:90vh;overflow-y:auto;animation:fadeUp 0.18s ease}
+.modal-header{display:flex;align-items:flex-start;justify-content:space-between;padding:22px 24px 0;gap:12px}
+.modal-title{font-weight:600;font-size:17px;color:var(--text)}
+.modal-close{width:26px;height:26px;border-radius:50%;border:none;background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text3);transition:all 0.1s}
+.modal-close:hover{background:var(--surface3);color:var(--text)}
+.modal-body{padding:18px 24px 24px}
+
+/* ── Auth screen ── */
+#auth-screen{position:fixed;inset:0;background:var(--bg);z-index:9990;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:var(--shadow-lg);width:100%;max-width:380px;padding:40px}
+
+/* ── CA Calculator ── */
+.ca-tier-header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.ca-tier-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.ca-tier-total{width:100%;padding:9px 12px;background:var(--surface-inset);border:1px solid var(--border);border-radius:var(--r-sm);display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+
+/* ── Status pipeline ── */
+.status-pipeline{display:flex;gap:6px;margin-bottom:20px}
+.status-tab{flex:1;padding:8px 12px;border-radius:var(--r-sm);border:1.5px solid var(--border2);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--text3);cursor:pointer;text-align:center;transition:all 0.12s}
+.status-tab.active{border-color:var(--accent);background:var(--accent-muted);color:var(--accent)}
+.status-tab:hover:not(.active){background:var(--surface2);color:var(--text2)}
+
+/* ── CSV format guide ── */
+.csv-guide{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;font-size:12px;color:var(--text2);margin-top:10px}
+.csv-guide code{background:var(--surface3);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:11.5px}
+
+/* ── Breakdown bars ── */
+.breakdown-row{display:flex;align-items:center;gap:10px;font-size:12.5px;margin-bottom:8px}
+.breakdown-label{width:68px;color:var(--text2);flex-shrink:0;font-size:12px}
+.breakdown-bar-wrap{flex:1;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.breakdown-bar{height:100%;border-radius:3px;transition:width 0.4s ease}
+.breakdown-count{font-size:11.5px;color:var(--text3);min-width:16px;text-align:right}
+.breakdown-val{font-size:12px;font-weight:600;color:var(--text);min-width:70px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ── Splash ── */
+#splash{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+@keyframes splashFadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes splashPulse{0%,100%{opacity:0.4;transform:scale(0.97)}50%{opacity:1;transform:scale(1)}}
+.splash-logo{animation:splashFadeUp 0.5s ease both}
+.splash-wordmark{animation:splashFadeUp 0.5s 0.1s ease both}
+.splash-tag{animation:splashFadeUp 0.5s 0.2s ease both}
+.splash-status{animation:splashFadeUp 0.5s 0.35s ease both}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <!-- Logo mark -->
+  <div class="splash-logo" style="width:56px;height:56px;background:var(--accent);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(39,72,214,0.25);margin-bottom:20px">
+    <svg width="26" height="26" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M4 6h8M4 14h6" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+  </div>
+  <!-- Wordmark -->
+  <div class="splash-wordmark" style="font-family:var(--font-display);font-weight:600;font-size:28px;color:var(--text);letter-spacing:-0.8px;margin-bottom:8px">Quotecraft</div>
+  <!-- Tag -->
+  <div class="splash-tag" style="display:flex;align-items:center;gap:8px;margin-bottom:28px">
+    <div style="height:1px;width:28px;background:var(--border3)"></div>
+    <div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3)">Eavesdrop Internal</div>
+    <div style="height:1px;width:28px;background:var(--border3)"></div>
+  </div>
+  <!-- Loading -->
+  <div class="splash-status" style="display:flex;flex-direction:column;align-items:center;gap:10px">
+    <div style="width:160px;height:2px;background:var(--surface3);border-radius:2px;overflow:hidden">
+      <div id="splash-bar" style="height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width 0.5s cubic-bezier(0.4,0,0.2,1)"></div>
+    </div>
+    <div style="font-size:12px;color:var(--text4);letter-spacing:0.02em">Loading workspace</div>
+  </div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" style="display:none">
+  <div style="text-align:center;margin-bottom:32px">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px">
+      <div style="width:36px;height:36px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M4 6h8M4 14h6" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div style="font-family:var(--font-display);font-weight:600;font-size:17px;color:var(--text);letter-spacing:-0.3px">QINTERNAL</div>
+        <div style="font-size:11px;color:var(--text3)">Eavesdrop Finance</div>
+      </div>
+    </div>
+  </div>
+  <div class="auth-card">
+    <div style="font-weight:600;font-size:19px;color:var(--text);margin-bottom:4px">Finance portal</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:24px">Internal use only. Enter the access password to continue.</div>
+    <div class="form-group">
+      <label>Access password</label>
+      <input type="password" id="auth-pw" placeholder="Enter password" autocomplete="current-password">
+    </div>
+    <div id="auth-error" style="display:none;margin-bottom:12px;padding:9px 12px;background:var(--red-bg);border:1px solid var(--red-border);border-radius:var(--r-sm);font-size:12.5px;color:var(--red)"></div>
+    <button class="btn btn-primary btn-full" style="padding:10px;font-size:14px" onclick="authLogin()">Enter →</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="qi-toast"></div>
+
+<!-- NEW QUOTE MODAL (asset import) -->
+<div class="modal-overlay" id="new-quote-modal" onclick="if(event.target===this)closeNQModal()">
+  <div class="modal-box" style="max-width:660px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="nq-modal-title" data-cid="">New Quote</div>
+        <div style="font-size:12.5px;color:var(--text3);margin-top:3px" id="nq-modal-sub">Upload your asset list to auto-generate an estimate</div>
+      </div>
+      <button class="modal-close" onclick="closeNQModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Step 1: Details -->
+      <div id="nq-step-1">
+        <div class="form-row" style="margin-bottom:14px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Quote number</label>
+            <input type="text" id="nq-num" placeholder="EST-001">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Date</label>
+            <input type="text" id="nq-date">
+          </div>
+        </div>
+        <div class="form-row" style="margin-bottom:14px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Client contact name</label>
+            <input type="text" id="nq-contact" placeholder="e.g. Sarah Jones">
+          </div>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Project title</label>
+            <input type="text" id="nq-title-input" placeholder="e.g. Summer Campaign 2026">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Project title</label>
+            <input type="text" id="nq-title-input" placeholder="e.g. Summer Campaign 2026">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Scope notes <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
+          <textarea id="nq-notes" rows="2" placeholder="Brief project description or additional context…"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:20px">
+          <button class="btn btn-primary" onclick="nqGoStep(2)">Continue: Asset List →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Asset list import -->
+      <div id="nq-step-2" style="display:none">
+        <div class="import-tabs">
+          <button class="import-tab active" id="nqtab-upload" onclick="nqSwitchTab('upload')">Upload file</button>
+          <button class="import-tab" id="nqtab-csv" onclick="nqSwitchTab('csv')">CSV</button>
+          <button class="import-tab" id="nqtab-text" onclick="nqSwitchTab('text')">Plain text</button>
+        </div>
+
+        <!-- Upload -->
+        <div class="import-panel active" id="nqpanel-upload">
+          <div class="drop-zone" id="nq-drop-zone">
+            <input type="file" id="nq-file-input" accept=".xlsx,.xls,.csv,.txt" onchange="nqHandleFile(this.files[0])">
+            <span class="drop-icon">📋</span>
+            <div class="drop-text"><strong>Click to upload</strong> or drag & drop</div>
+            <div class="drop-hint">Excel (.xlsx), CSV, or plain text</div>
+          </div>
+          <div class="parse-status" id="nq-file-status"><span id="nq-file-msg"></span></div>
+        </div>
+
+        <!-- CSV -->
+        <div class="import-panel" id="nqpanel-csv">
+          <div class="csv-guide">
+            <div style="font-weight:600;color:var(--text);margin-bottom:6px">Required CSV column format:</div>
+            <code>Asset Name, Role, Qty, Hours, Rate</code>
+            <div style="margin-top:8px;color:var(--text3)">Example rows:</div>
+            <code>30sec TVC edit,Senior Producer,1,12,200</code><br>
+            <code>Social statics 1:1,Designer,6,4,200</code>
+            <div style="margin-top:6px;color:var(--text3)">Role and Rate are optional — if left blank, the tool will estimate based on asset type.</div>
+          </div>
+          <div style="margin-top:12px">
+            <textarea id="nq-csv-input" rows="6" placeholder="Paste CSV rows here…&#10;Asset Name, Role, Qty, Hours, Rate&#10;30sec TVC master,Senior Producer,1,16,200&#10;Social static 1:1,Designer,4,3,200"></textarea>
+            <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="nqParseCSV()">Parse CSV</button>
+            <div class="parse-status" id="nq-csv-status"><span id="nq-csv-msg"></span></div>
+          </div>
+        </div>
+
+        <!-- Plain text -->
+        <div class="import-panel" id="nqpanel-text">
+          <div style="font-size:12.5px;color:var(--text2);margin-bottom:8px">Paste your asset list in any format — one item per line works best. Use the <strong>Format</strong> button to clean messy text before processing.</div>
+          <textarea id="nq-text-input" rows="7" placeholder="• 30sec TVC — national&#10;• Social static 1:1 — 6 states&#10;• HTML banner 300x250&#10;• Print ad — full page&#10;• Radio 30sec"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-secondary btn-sm" onclick="nqFormatText()">Format text</button>
+            <button class="btn btn-secondary btn-sm" onclick="nqParseText()">Extract assets</button>
+          </div>
+          <div class="parse-status" id="nq-text-status"><span id="nq-text-msg"></span></div>
+        </div>
+
+        <!-- Preview -->
+        <div id="nq-preview" style="display:none;margin-top:18px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:13px;font-weight:600;color:var(--text)"><span id="nq-preview-count">0</span> assets found</div>
+            <button class="btn btn-ghost btn-sm" onclick="clearNQPreview()">Clear</button>
+          </div>
+          <div style="overflow:auto;max-height:300px;border:1px solid var(--border);border-radius:var(--r-sm)">
+            <div id="nq-preview-body"></div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:space-between;margin-top:14px">
+            <button class="btn btn-ghost" onclick="nqGoStep(1)">← Back</button>
+            <button class="btn btn-primary" onclick="nqCreate()">
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M7 2v10M2 7h10"/></svg>
+              Create estimate
+            </button>
+          </div>
+        </div>
+
+        <div id="nq-ai-loading" style="display:none;text-align:center;padding:28px;color:var(--text3)">
+          <div class="loader" style="justify-content:center;margin-bottom:10px"><span></span><span></span><span></span></div>
+          <div style="font-size:13px">AI is building your estimate…</div>
+        </div>
+
+        <div id="nq-step2-back" style="margin-top:14px">
+          <button class="btn btn-ghost btn-sm" onclick="nqGoStep(1)" style="color:var(--text3)">← Back to details</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="app" style="display:none">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-mark">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M4 6h8M4 14h6" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="sb-logo-name">QINTERNAL</div>
+        <div class="sb-logo-sub">Eavesdrop Finance</div>
+      </div>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-section">Workspace</div>
+      <div class="sb-item active" id="nav-dashboard" onclick="navTo('dashboard',this)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+        Overview
+      </div>
+      <div class="sb-item" id="nav-quotes" onclick="navTo('quotes',this)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 6h6M5 9h4"/></svg>
+        All Quotes
+      </div>
+      <div class="sb-section">Clients</div>
+      <div class="sb-item" id="nav-ca" onclick="navClient('ca',this)">
+        <div class="sb-client-dot" style="background:#00A651"></div>
+        Cricket Australia
+      </div>
+      <div class="sb-item" id="nav-legalsuper" onclick="navClient('legalsuper',this)">
+        <div class="sb-client-dot" style="background:#1A4E8C"></div>
+        legalsuper
+      </div>
+      <div class="sb-item" id="nav-bega" onclick="navClient('bega',this)">
+        <div class="sb-client-dot" style="background:#E87722"></div>
+        BEGA
+      </div>
+      <div class="sb-item" id="nav-centacare" onclick="navClient('centacare',this)">
+        <div class="sb-client-dot" style="background:#C8102E"></div>
+        Centacare
+      </div>
+      <div class="sb-item" id="nav-goolwa" onclick="navClient('goolwa',this)">
+        <div class="sb-client-dot" style="background:#3D7F4A"></div>
+        Goolwa Pipi Co.
+      </div>
+    </div>
+    <div class="sb-footer">
+      <div style="font-size:11px;color:var(--text4);padding:6px 9px 4px">Eavesdrop Finance · Internal</div>
+      <button onclick="logOut()" style="width:100%;padding:7px 9px;border-radius:var(--r-sm);font-size:12px;font-weight:500;color:var(--text3);background:transparent;border:none;cursor:pointer;font-family:var(--font-body);text-align:left;display:flex;align-items:center;gap:7px;transition:all 0.12s" onmouseover="this.style.background='var(--red-bg)';this.style.color='var(--red)'" onmouseout="this.style.background='transparent';this.style.color='var(--text3)'">
+        <svg width="12" height="12" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 1.5H2.5a1 1 0 00-1 1v8a1 1 0 001 1H5M9 9.5l2.5-3L9 3.5M4 6.5h7.5"/></svg>
+        Lock workspace
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="breadcrumb">
+        <strong id="bc-parent">Overview</strong>
+        <span class="breadcrumb-sep" id="bc-sep" style="display:none">/</span>
+        <span id="bc-child"></span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary" onclick="openNewQuoteModal(null)">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M7 2v10M2 7h10"/></svg>
+          New Quote
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- OVERVIEW DASHBOARD -->
+      <div class="screen active" id="screen-dashboard">
+        <div class="page-header">
+          <div class="page-title" id="dash-greeting">Finance Overview</div>
+          <div class="page-sub">Eavesdrop · All clients · Quote pipeline</div>
+        </div>
+        <div class="stats-row" id="dash-stats"></div>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Recent quotes</div>
+              <button class="btn btn-ghost btn-sm" onclick="navTo('quotes',document.getElementById('nav-quotes'))">View all</button>
+            </div>
+            <div id="dash-recent-quotes"></div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:14px">
+              <div class="card-header" style="margin-bottom:12px"><div class="card-title">Status breakdown</div></div>
+              <div id="dash-breakdown"></div>
+            </div>
+            <div class="card">
+              <div class="card-header" style="margin-bottom:12px"><div class="card-title">By client</div></div>
+              <div id="dash-clients"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALL QUOTES -->
+      <div class="screen" id="screen-quotes">
+        <div class="page-header">
+          <div class="page-title">All Quotes</div>
+          <div class="page-sub" id="quotes-sub">0 quotes</div>
+        </div>
+        <div class="card">
+          <div style="display:flex;gap:10px;margin-bottom:16px">
+            <input type="text" placeholder="Search by client, title, or number…" oninput="filterQuotes(this.value)" style="flex:1">
+            <select onchange="filterStatus(this.value)" style="width:auto;padding:9px 28px 9px 12px">
+              <option value="">All statuses</option>
+              <option value="Pipeline">Pipeline</option>
+              <option value="Approved">Approved</option>
+              <option value="Fulfilled">Fulfilled</option>
+            </select>
+          </div>
+          <div id="all-quotes-list"></div>
+        </div>
+      </div>
+
+      <!-- CLIENT DASHBOARD -->
+      <div class="screen" id="screen-client">
+        <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <div id="client-dot" style="width:12px;height:12px;border-radius:3px;flex-shrink:0"></div>
+              <div class="page-title" id="client-page-title" style="margin-bottom:0"></div>
+            </div>
+            <div class="page-sub" id="client-page-sub"></div>
+          </div>
+          <button class="btn btn-primary" onclick="openNewQuoteModal(currentClient)">+ New Quote</button>
+        </div>
+        <div class="stats-row" id="client-stats"></div>
+
+        <!-- Status tabs -->
+        <div class="status-pipeline" id="client-status-tabs">
+          <div class="status-tab active" onclick="filterClientStatus('',this)" id="ctab-all">All</div>
+          <div class="status-tab" onclick="filterClientStatus('Pipeline',this)" id="ctab-pipeline">Pipeline</div>
+          <div class="status-tab" onclick="filterClientStatus('Approved',this)" id="ctab-approved">Approved</div>
+          <div class="status-tab" onclick="filterClientStatus('Fulfilled',this)" id="ctab-fulfilled">Fulfilled</div>
+        </div>
+
+        <!-- CA special section -->
+        <div id="ca-calc-shortcut" style="display:none;margin-bottom:16px">
+          <div class="card" style="border-left:3px solid #00A651;background:linear-gradient(to right,#F0FBF4,var(--surface))">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div style="font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:3px">CA Fee Calculator</div>
+                <div style="font-size:12px;color:var(--text3)">Fixed-rate production fee calculator per Cricket Australia's approved schedule</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="navTo('ca',null)">Open calculator →</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div id="client-quotes-list"></div>
+        </div>
+      </div>
+
+      <!-- QUOTE DETAIL / ESTIMATE -->
+      <div class="screen" id="screen-quote">
+        <div class="step-bar">
+          <div class="step-btn active" id="qs-btn-1" onclick="goQuoteStep(1)"><div class="step-num">1</div><span class="step-label">Details</span></div>
+          <div class="step-btn" id="qs-btn-2" onclick="goQuoteStep(2)"><div class="step-num">2</div><span class="step-label">Estimate</span></div>
+          <div class="step-btn" id="qs-btn-3" onclick="goQuoteStep(3)"><div class="step-num">3</div><span class="step-label">Review</span></div>
+        </div>
+
+        <!-- Step 1: Details -->
+        <div id="qs-1">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Quote details</div></div>
+            <div class="form-row" style="margin-bottom:14px">
+              <div class="form-group" style="margin-bottom:0"><label>Quote number</label><input type="text" id="q-num"></div>
+              <div class="form-group" style="margin-bottom:0"><label>Date</label><input type="text" id="q-date"></div>
+            </div>
+            <div class="form-row" style="margin-bottom:14px">
+              <div class="form-group" style="margin-bottom:0"><label>Client</label><input type="text" id="q-client" readonly style="background:var(--surface2);cursor:default"></div>
+              <div class="form-group" style="margin-bottom:0"><label>Contact name</label><input type="text" id="q-contact"></div>
+            </div>
+            <div class="form-group"><label>Project title</label><input type="text" id="q-title"></div>
+            <div class="form-group" style="margin-bottom:0"><label>Scope notes</label><textarea id="q-notes" rows="2"></textarea></div>
+          </div>
+          <div class="flow-footer">
+            <button class="btn btn-ghost" onclick="navBack()">← Back</button>
+            <button class="btn btn-primary" onclick="goQuoteStep(2)">Continue: Estimate →</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Estimate -->
+        <div id="qs-2" style="display:none">
+          <div class="two-col">
+            <div class="two-col-main">
+              <div class="card">
+                <div class="card-header">
+                  <div><div class="card-title">Estimate</div><div class="card-sub" id="qs-est-subtitle">Edit roles, hours and rates below</div></div>
+                  <div style="display:flex;gap:8px">
+                    <button class="btn btn-secondary btn-sm" onclick="addAssetLine()">+ Add line</button>
+                  </div>
+                </div>
+                <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">
+                  <!-- Header row -->
+                  <div style="display:grid;grid-template-columns:200px 1fr;background:var(--surface2);border-bottom:1.5px solid var(--border2)">
+                    <div style="padding:8px 12px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;border-right:1px solid var(--border)">Asset</div>
+                    <div style="display:grid;grid-template-columns:1fr 52px 60px 72px 88px 28px;gap:4px;padding:8px 10px">
+                      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Role</div>
+                      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;text-align:center">Qty</div>
+                      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;text-align:center">Hrs</div>
+                      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Rate/hr</div>
+                      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;text-align:right">Total</div>
+                      <div></div>
+                    </div>
+                  </div>
+                  <div id="est-body"></div>
+                </div>
+                <!-- AI re-import strip -->
+                <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px;display:flex;align-items:center;gap:10px">
+                  <span class="ai-pill"><span class="ai-dot"></span>AI</span>
+                  <span style="font-size:12px;color:var(--text3)">Need to re-process the asset list?</span>
+                  <button class="btn btn-ghost btn-sm" style="font-size:12px" onclick="reprocessAssets()">Re-import asset list</button>
+                </div>
+              </div>
+            </div>
+            <div style="width:220px;flex-shrink:0">
+              <div class="summary-rail">
+                <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px">Summary</div>
+                <div id="est-summary"></div>
+                <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+                  <label style="margin-bottom:6px">Status</label>
+                  <select id="q-status" onchange="updateStatus(this.value)">
+                    <option value="Pipeline">Pipeline</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Fulfilled">Fulfilled</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-footer">
+            <button class="btn btn-ghost" onclick="goQuoteStep(1)">← Back</button>
+            <div style="display:flex;gap:10px">
+              <button class="btn btn-secondary" onclick="exportQuoteCSV()">Export CSV</button>
+              <button class="btn btn-primary" onclick="goQuoteStep(3)">Review →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Review -->
+        <div id="qs-3" style="display:none">
+          <div class="two-col">
+            <div class="two-col-main">
+              <div class="card">
+                <div class="card-header">
+                  <div><div class="card-title">Quote summary</div><div class="card-sub">Review before saving</div></div>
+                  <select id="q-status-3" onchange="updateStatus(this.value)" style="width:auto;font-size:12px;padding:4px 24px 4px 8px">
+                    <option value="Pipeline">Pipeline</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Fulfilled">Fulfilled</option>
+                  </select>
+                </div>
+                <div id="review-meta" style="font-size:13px;color:var(--text2);line-height:2;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)"></div>
+                <div id="review-lines"></div>
+                <div id="review-totals" style="margin-top:14px"></div>
+              </div>
+            </div>
+            <div style="width:220px;flex-shrink:0">
+              <div class="summary-rail">
+                <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px">Final total</div>
+                <div id="review-rail"></div>
+                <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+                  <button class="btn btn-secondary btn-full" onclick="exportQuoteCSV()">Export CSV</button>
+                  <button class="btn btn-ghost btn-full" onclick="goQuoteStep(2)">← Edit estimate</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-footer">
+            <button class="btn btn-ghost" onclick="goQuoteStep(2)">← Back</button>
+            <button class="btn btn-success" onclick="saveQuote()">Save quote ✓</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CRICKET AUSTRALIA CALCULATOR -->
+      <div class="screen" id="screen-ca">
+        <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <div style="width:32px;height:32px;background:#00A651;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="white" stroke-width="1.5"/><path d="M5.5 8c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg>
+              </div>
+              <div class="page-title" style="margin-bottom:0">Cricket Australia — Fee Calculator</div>
+            </div>
+            <div class="page-sub">Fixed-rate production fee calculator per CA's approved schedule. Internal use only.</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="caReset()">Reset</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:flex-start">
+          <div>
+
+            <!-- T1 VIDEO -->
+            <div class="card" style="margin-bottom:14px">
+              <div class="card-header" style="margin-bottom:16px">
+                <div>
+                  <div class="card-title">Tier 1 — Television / Video & Radio</div>
+                  <div class="card-sub">Broadcast-quality video production and audio</div>
+                </div>
+                <div class="ca-tier-dot" style="background:#00A651;margin-top:4px"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+                <div class="form-group" style="margin-bottom:0">
+                  <label>Project size</label>
+                  <select id="ca-t1v-size" onchange="caCalc()">
+                    <option value="">— Select —</option>
+                    <option value="20000">Major — 3 master files (30″, 15″, 6″), full day shoot — $20,000</option>
+                    <option value="15000">Medium — 2 master files (30″, 15″), full day shoot — $15,000</option>
+                    <option value="10000">Light — 90″ edit from existing footage — $10,000</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                  <label>Project refresh?</label>
+                  <select id="ca-t1v-refresh" onchange="caCalc()">
+                    <option value="no">No — net new</option>
+                    <option value="yes">Yes — refresh of existing (50%)</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+                <div class="form-group" style="margin-bottom:0"><label># New versions</label><input type="number" id="ca-t1v-new" value="0" min="0" oninput="caCalc()"></div>
+                <div class="form-group" style="margin-bottom:0"><label># Refreshed versions</label><input type="number" id="ca-t1v-ref" value="0" min="0" oninput="caCalc()"></div>
+                <div class="form-group" style="margin-bottom:0">
+                  <label>Audio project?</label>
+                  <select id="ca-t1v-audio" onchange="caCalc()">
+                    <option value="no">No</option>
+                    <option value="yes">Yes (+$1,000 base)</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div class="form-group" style="margin-bottom:0"><label>Additional audio assets</label><input type="number" id="ca-t1v-audio-add" value="0" min="0" oninput="caCalc()"></div>
+                <div style="display:flex;align-items:flex-end;padding-bottom:2px">
+                  <div class="ca-tier-total">
+                    <span style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Tier 1 Video total</span>
+                    <span style="font-weight:700;font-size:15px;color:var(--text);font-variant-numeric:tabular-nums" id="ca-t1v-total">$0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- T1 PHOTO -->
+            <div class="card" style="margin-bottom:14px">
+              <div class="card-header" style="margin-bottom:16px">
+                <div>
+                  <div class="card-title">Tier 1 — Photoshoots & Stills</div>
+                  <div class="card-sub">Hero image production including retouching</div>
+                </div>
+                <div class="ca-tier-dot" style="background:#00A651;margin-top:4px"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div class="form-group" style="margin-bottom:0">
+                  <label>Project size</label>
+                  <select id="ca-t1p-size" onchange="caCalc()">
+                    <option value="">— Select —</option>
+                    <option value="10000">Major — 16 hero images, retouching, full day shoot — $10,000</option>
+                    <option value="7500">Medium — 8 hero images, retouching, full day shoot — $7,500</option>
+                    <option value="4000">Light — 8 hero images, retouching, half day shoot — $4,000</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                  <label>Project refresh?</label>
+                  <select id="ca-t1p-refresh" onchange="caCalc()">
+                    <option value="no">No — net new</option>
+                    <option value="yes">Yes — refresh of existing (50%)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="ca-tier-total" style="margin-top:12px">
+                <span style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Tier 1 Photo total</span>
+                <span style="font-weight:700;font-size:15px;color:var(--text);font-variant-numeric:tabular-nums" id="ca-t1p-total">$0</span>
+              </div>
+            </div>
+
+            <!-- T2 DIGITAL -->
+            <div class="card" style="margin-bottom:14px">
+              <div class="card-header" style="margin-bottom:16px">
+                <div>
+                  <div class="card-title">Tier 2 — Digital & Content Creation</div>
+                  <div class="card-sub">Social, display, HTML banners, interscrollers</div>
+                </div>
+                <div class="ca-tier-dot" style="background:#0052CC;margin-top:4px"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+                <div class="form-group" style="margin-bottom:0">
+                  <label>Project size</label>
+                  <select id="ca-t2-size" onchange="caCalc()">
+                    <option value="">— Select —</option>
+                    <option value="10000">Major — 5–10 master files — $10,000</option>
+                    <option value="5000">Medium — 3–4 master files — $5,000</option>
+                    <option value="2500">Light — 1–2 master files — $2,500</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                  <label>Project refresh?</label>
+                  <select id="ca-t2-refresh" onchange="caCalc()">
+                    <option value="no">No — net new</option>
+                    <option value="yes">Yes — refresh of existing (50%)</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+                <div class="form-group" style="margin-bottom:0"><label># New versions</label><input type="number" id="ca-t2-new" value="0" min="0" oninput="caCalc()"></div>
+                <div class="form-group" style="margin-bottom:0"><label># Refreshed versions</label><input type="number" id="ca-t2-ref" value="0" min="0" oninput="caCalc()"></div>
+                <div style="display:flex;align-items:flex-end;padding-bottom:2px">
+                  <div class="ca-tier-total">
+                    <span style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Tier 2 total</span>
+                    <span style="font-weight:700;font-size:15px;color:var(--text);font-variant-numeric:tabular-nums" id="ca-t2-total">$0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- T3 PRINT -->
+            <div class="card" style="margin-bottom:14px">
+              <div class="card-header" style="margin-bottom:16px">
+                <div>
+                  <div class="card-title">Tier 3 — Print & OOH</div>
+                  <div class="card-sub">Print ads, out-of-home, static media</div>
+                </div>
+                <div class="ca-tier-dot" style="background:#7B2D8B;margin-top:4px"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+                <div class="form-group" style="margin-bottom:0">
+                  <label>Project size</label>
+                  <select id="ca-t3-size" onchange="caCalc()">
+                    <option value="">— Select —</option>
+                    <option value="10000">Major — 5–10 master files — $10,000</option>
+                    <option value="5000">Medium — 3–4 master files — $5,000</option>
+                    <option value="2500">Light — 1–2 master files — $2,500</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                  <label>Project refresh?</label>
+                  <select id="ca-t3-refresh" onchange="caCalc()">
+                    <option value="no">No — net new</option>
+                    <option value="yes">Yes — refresh of existing (50%)</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+                <div class="form-group" style="margin-bottom:0"><label># New versions</label><input type="number" id="ca-t3-new" value="0" min="0" oninput="caCalc()"></div>
+                <div class="form-group" style="margin-bottom:0"><label># Refreshed versions</label><input type="number" id="ca-t3-ref" value="0" min="0" oninput="caCalc()"></div>
+                <div style="display:flex;align-items:flex-end;padding-bottom:2px">
+                  <div class="ca-tier-total">
+                    <span style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Tier 3 total</span>
+                    <span style="font-weight:700;font-size:15px;color:var(--text);font-variant-numeric:tabular-nums" id="ca-t3-total">$0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI INTERPRETER -->
+            <div class="card" style="border:1.5px solid var(--accent-border);background:var(--accent-muted)">
+              <div class="card-header" style="margin-bottom:12px">
+                <div>
+                  <div class="card-title" style="display:flex;align-items:center;gap:7px">
+                    <span class="ai-pill"><span class="ai-dot"></span>AI</span>
+                    Asset list interpreter
+                  </div>
+                  <div class="card-sub">Paste your asset list — AI will recommend tiers and pre-fill the calculator.</div>
+                </div>
+              </div>
+              <textarea id="ca-ai-input" placeholder="Paste your asset list here — one item per line, or any format…&#10;&#10;e.g.&#10;• Print ad – NSW&#10;• Social static – WBBL 1:1 – VIC&#10;• HTML banner 300x250 – national&#10;• 30sec radio spot" style="min-height:130px;background:var(--surface);border-color:var(--accent-border);font-size:13px"></textarea>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+                <button class="btn btn-primary" id="ca-ai-btn" onclick="caInterpretAssets()">
+                  ✦ Interpret & suggest
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="caClearInterpreter()" style="color:var(--text3)">Clear</button>
+                <span id="ca-ai-status" style="font-size:12px;color:var(--text3)"></span>
+              </div>
+              <div id="ca-ai-result" style="display:none;margin-top:16px">
+                <div style="height:1px;background:var(--accent-border);margin-bottom:14px"></div>
+                <div id="ca-ai-reasoning" style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--accent-border);border-radius:var(--r-sm)"></div>
+                <div style="font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Asset breakdown</div>
+                <div id="ca-ai-table-wrap" style="overflow-x:auto;margin-bottom:14px">
+                  <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+                    <thead>
+                      <tr style="background:var(--surface);border-bottom:1px solid var(--border2)">
+                        <th style="text-align:left;padding:7px 10px;font-weight:600;color:var(--text2);font-size:11px">Asset group</th>
+                        <th style="text-align:left;padding:7px 10px;font-weight:600;color:var(--text2);font-size:11px">Tier</th>
+                        <th style="text-align:center;padding:7px 10px;font-weight:600;color:var(--text2);font-size:11px">Masters</th>
+                        <th style="text-align:center;padding:7px 10px;font-weight:600;color:var(--text2);font-size:11px">Versions</th>
+                        <th style="text-align:left;padding:7px 10px;font-weight:600;color:var(--text2);font-size:11px">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ca-ai-tbody"></tbody>
+                  </table>
+                </div>
+                <div style="font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Suggested settings</div>
+                <div id="ca-ai-config" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px"></div>
+                <button class="btn btn-primary btn-full" onclick="caApplyRecommendation()">Apply recommendation to calculator →</button>
+              </div>
+            </div>
+
+            <!-- SCOPE NOTES -->
+            <div class="card" style="margin-top:14px">
+              <div class="card-header" style="margin-bottom:12px"><div class="card-title">Scope notes <span style="font-weight:400;color:var(--text3);font-size:12px">(optional)</span></div></div>
+              <textarea id="ca-notes" placeholder="Add briefing notes, assumptions, or context…" style="min-height:80px"></textarea>
+            </div>
+          </div>
+
+          <!-- SUMMARY RAIL -->
+          <div style="position:sticky;top:20px">
+            <div class="card" style="border:1.5px solid var(--border2)">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+                <div style="width:8px;height:8px;border-radius:50%;background:#00A651"></div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3)">CA Fee Summary</div>
+              </div>
+              <div class="summary-line"><span class="summary-label" style="font-size:12.5px">T1 Video & Radio</span><span class="summary-amount" style="font-size:13px" id="ca-sum-t1v">$0</span></div>
+              <div class="summary-line"><span class="summary-label" style="font-size:12.5px">T1 Photoshoots</span><span class="summary-amount" style="font-size:13px" id="ca-sum-t1p">$0</span></div>
+              <div class="summary-line"><span class="summary-label" style="font-size:12.5px">T2 Digital & Content</span><span class="summary-amount" style="font-size:13px" id="ca-sum-t2">$0</span></div>
+              <div class="summary-line"><span class="summary-label" style="font-size:12.5px">T3 Print & OOH</span><span class="summary-amount" style="font-size:13px" id="ca-sum-t3">$0</span></div>
+              <div class="summary-line grand"><span class="summary-label">Total</span><span class="summary-amount" id="ca-grand-total">$0</span></div>
+              <div style="margin-top:14px;padding:11px 13px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--r-sm)">
+                <div style="font-size:11px;font-weight:600;color:var(--amber);margin-bottom:3px">⚠ Rates are ex-GST</div>
+                <div style="font-size:11.5px;color:var(--amber);line-height:1.5">Fixed per CA's approved schedule. Do not adjust without CA sign-off.</div>
+              </div>
+              <button class="btn btn-primary btn-full" style="margin-top:12px" onclick="caCopyScope()">Copy scope summary</button>
+              <button class="btn btn-secondary btn-full" style="margin-top:8px" onclick="caExportCSV()">Export as CSV</button>
+            </div>
+            <div id="ca-refresh-note" style="display:none;margin-top:12px;padding:11px 13px;background:var(--green-bg);border:1px solid var(--green-border);border-radius:var(--r-sm);font-size:12px;color:var(--green);line-height:1.5">
+              <strong>Refresh pricing applied.</strong> Refreshed versions at 50% of base rate.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────────────────
+const STORAGE_KEY = 'qc_int_v1';
+const PASSWORD = 'eavesdrop2026';
+const QI_API_KEY = 'sk-ant-api03-placeholder'; // replace with actual key or use settings
+
+// Client config
+const CLIENTS = {
+  ca:         { name:'Cricket Australia', color:'#00A651', mode:'ca' },
+  legalsuper: { name:'legalsuper',        color:'#1A4E8C', mode:'rate' },
+  bega:       { name:'BEGA',              color:'#E87722', mode:'rate' },
+  centacare:  { name:'Centacare',         color:'#C8102E', mode:'rate' },
+  goolwa:     { name:'Goolwa Pipi Co.',   color:'#3D7F4A', mode:'rate' }
+};
+
+// Eavesdrop rate card (role → rate)
+const RATE_CARD = {
+  'Account Director':220,'Account Executive':140,'Account Management':160,'GAD':300,
+  'Senior Account Director':240,'Senior Account Manager':180,
+  'Art Director':200,'Copywriter':200,'Creative Director':350,
+  'Junior Art Director':150,'Junior Copywriter':150,
+  'Senior Art Director':240,'Senior Copywriter':240,'ECD':390,
+  'Design Director':250,'Designer':200,
+  'Finished Artist':180,'Print Producer':200,
+  'Agency Producer':220,'Junior Producer':120,'Producer':180,'Senior Producer':200,
+  'Strategist':220,'Senior Strategist':260,'Strategy Director':300
+};
+
+// ── STATE ──────────────────────────────────────────────────────────────
+let state = { quotes:[], currentQuote:null };
+let currentClient = null;
+let clientStatusFilter = '';
+let quotesFilter = '';
+let quotesStatusFilter = '';
+// nqAssets holds preview state
+let caLastRec = null;
+
+function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+function loadState(){ try{ const s=localStorage.getItem(STORAGE_KEY); if(s) state={...state,...JSON.parse(s)}; }catch(e){} }
+
+// ── UTILS ──────────────────────────────────────────────────────────────
+function fmt(n){ return '$'+Number(n||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtInt(n){ return '$'+Math.round(Number(n||0)).toLocaleString('en-AU'); }
+function toast(msg){ const el=document.getElementById('qi-toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2800); }
+function autoNum(){ const nums=state.quotes.map(q=>parseInt((q.num||'').replace(/\D/g,''))||0); const next=(nums.length?Math.max(...nums):0)+1; return'EST-'+String(next).padStart(3,'0'); }
+function today(){ return new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); }
+function roleOpts(selected){ return Object.entries(RATE_CARD).map(([role,rate])=>`<option value="${role}" data-rate="${rate}" ${role===selected?'selected':''}>${role} ($${rate}/hr)</option>`).join(''); }
+function matchRole(name){
+  const n=(name||'').toLowerCase();
+  const map=[['producer','Senior Producer'],['tvc','Senior Producer'],['video','Senior Producer'],['film','Agency Producer'],['audio','Agency Producer'],['radio','Agency Producer'],['photo','Agency Producer'],['designer','Designer'],['design','Designer'],['digital','Designer'],['banner','Designer'],['social','Designer'],['html','Designer'],['static','Designer'],['motion','Designer'],['animation','Designer'],['art director','Art Director'],['print','Finished Artist'],['ooh','Finished Artist'],['outdoor','Finished Artist'],['copy','Copywriter'],['content','Copywriter'],['strat','Strategist'],['account','Account Director'],['pm','Account Director'],['management','Account Director']];
+  for(const[k,r]of map){ if(n.includes(k) && RATE_CARD[r]!==undefined) return {role:r, rate:RATE_CARD[r]}; }
+  return {role:'Designer', rate:RATE_CARD['Designer']||200};
+}
+// ── ASSET TYPE & ROLE LOGIC ───────────────────────────────────────────
+// Detect asset type from name
+function detectAssetType(name){
+  const n=(name||'').toLowerCase();
+  if(/html|mrec|leaderboard|half.page|billboard.*px|interscroll|300x|728x|970x|300x6/i.test(n)) return 'html';
+  if(/ooh.*dynamic|dynamic.*ooh|dynamic.*outdoor|outdoor.*dynamic|dynamic.*1080|dynamic.*1920/i.test(n)) return 'dynamic';
+  if(/ooh|outdoor|ooh.*static|static.*ooh|static.*1080|static.*1920/i.test(n)) return 'static';
+  if(/tvc|broadcast|video|:30|:15|:06|30.?sec|15.?sec|6.?sec/i.test(n)) return 'video';
+  if(/meta.*static|static.*meta|linkedin.*static|static.*linkedin|social.*static|static.*social/i.test(n)) return 'static';
+  if(/meta.*dynamic|dynamic.*meta|linkedin.*dynamic|dynamic.*linkedin/i.test(n)) return 'dynamic';
+  if(/meta.*video|video.*meta/i.test(n)) return 'video';
+  if(/finished.file|finished.art|fa/i.test(n)) return 'finished';
+  if(/edm|partner.*edm|member.*email|email.*variation/i.test(n)) return 'edm';
+  if(/copy|copywriting/i.test(n)) return 'copy';
+  return 'static';
+}
+
+// Default roles per asset type — all editable by user
+function defaultRoles(type){
+  switch(type){
+    case 'static':   return [{role:'Senior Art Director',qty:1,hours:2,rate:240},{role:'Designer',qty:1,hours:2,rate:200}];
+    case 'video':    return [{role:'Senior Art Director',qty:1,hours:2,rate:240},{role:'Designer',qty:1,hours:2,rate:200}];
+    case 'html':     return [{role:'Senior Art Director',qty:1,hours:2,rate:240},{role:'Designer',qty:1,hours:2,rate:200}];
+    case 'dynamic':  return [{role:'Senior Art Director',qty:1,hours:2,rate:240},{role:'Designer',qty:1,hours:2,rate:200}];
+    case 'edm':      return [{role:'Copywriter',qty:1,hours:2,rate:200},{role:'Designer',qty:1,hours:2,rate:200}];
+    case 'finished': return [{role:'Designer',qty:1,hours:2,rate:200}];
+    case 'copy':     return [{role:'Copywriter',qty:1,hours:2,rate:200}];
+    default:         return [{role:'Designer',qty:1,hours:2,rate:200}];
+  }
+}
+
+// Build a full asset object from a name
+function buildAsset(name){
+  const type=detectAssetType(name);
+  return {name, type, roles: defaultRoles(type).map(r=>({...r}))};
+}
+
+// Auto summary lines — always last for rate card clients (not CA)
+function buildSummaryLines(assets){
+  const n=assets.length;
+  return[
+    {name:'Dispatch & Asset Management',role:'Senior Account Manager',qty:1,hours:+(n*0.5).toFixed(1),rate:180,isAuto:true,label:n+' assets × 0.5hr'},
+    {name:'Campaign Overview',role:'ECD',qty:1,hours:2,rate:390,isAuto:true,label:'Campaign overview & sign-off'}
+  ];
+}
+
+function calcSummaryLineTotal(l){ return (l.qty||1)*(l.hours||0)*(l.rate||0); }
+
+function estimateHours(name){ const n=(name||'').toLowerCase(); const rules=[[/tvc|television|broadcast/,16],[/30.*sec|:30/,12],[/15.*sec|:15/,8],[/6.*sec|:06/,4],[/radio|audio/,8],[/photoshoot|hero image/,10],[/retouching/,6],[/html.*banner|interscroller/,8],[/display.*ad|banner/,6],[/social.*static|static.*social/,3],[/social.*animated|animated.*social/,6],[/eDM|email.*campaign/,8],[/ooh|outdoor|billboard/,6],[/print.*ad|magazine/,8],[/brand.*guide|guidelines/,24],[/logo/,16],[/brochure/,10],[/strategy/,20],[/copywriting/,12]]; for(const[pat,hrs]of rules){ if(pat.test(n))return hrs; } return 4; }
+
+function calcTotals(dels){ const sub=dels.reduce((s,d)=>s+(d.qty||1)*(d.hours||0)*(d.rate||0),0); const gst=sub*0.1; return{sub,gst,grand:sub+gst}; }
+
+// ── SPLASH & AUTH ──────────────────────────────────────────────────────
+window.onload = function(){
+  const bar=document.getElementById('splash-bar');
+  [{t:100,w:30},{t:400,w:60},{t:800,w:90},{t:1100,w:100}].forEach(s=>setTimeout(()=>{ if(bar)bar.style.width=s.w+'%'; },s.t));
+  setTimeout(()=>{
+    const splash=document.getElementById('splash');
+    splash.style.transition='opacity 0.35s ease'; splash.style.opacity='0';
+    setTimeout(()=>{ splash.style.display='none'; init(); },350);
+  },1400);
+};
+
+function init(){
+  loadState();
+  const authed=sessionStorage.getItem('qi_auth');
+  if(authed==='yes'){ showApp(); }
+  else{ document.getElementById('auth-screen').style.display='flex'; document.getElementById('auth-pw').addEventListener('keydown',e=>{ if(e.key==='Enter')authLogin(); }); }
+}
+
+function authLogin(){
+  const pw=document.getElementById('auth-pw').value;
+  const err=document.getElementById('auth-error');
+  if(pw===PASSWORD){
+    sessionStorage.setItem('qi_auth','yes');
+    document.getElementById('auth-screen').style.display='none';
+    showApp();
+  } else {
+    err.textContent='Incorrect password. Please try again.';
+    err.style.display='block';
+    document.getElementById('auth-pw').value='';
+    document.getElementById('auth-pw').focus();
+  }
+}
+
+function logOut(){ sessionStorage.removeItem('qi_auth'); location.reload(); }
+
+function showApp(){
+  document.getElementById('app').style.display='flex';
+  refreshDash();
+}
+
+// ── NAV ────────────────────────────────────────────────────────────────
+function navTo(screen, el){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const labels={dashboard:'Overview',quotes:'All Quotes',client:CLIENTS[currentClient]?.name||'Client',quote:'Quote',ca:'CA Calculator'};
+  document.getElementById('bc-parent').textContent=labels[screen]||screen;
+  document.getElementById('bc-sep').style.display='none';
+  document.getElementById('bc-child').textContent='';
+  if(screen==='dashboard') refreshDash();
+  if(screen==='quotes') renderAllQuotes();
+  if(screen==='ca'){ document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active')); document.getElementById('nav-ca')?.classList.add('active'); }
+}
+
+function navClient(clientId, el){
+  currentClient=clientId;
+  clientStatusFilter='';
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-client').classList.add('active');
+
+  const c=CLIENTS[clientId];
+  document.getElementById('client-dot').style.background=c.color;
+  document.getElementById('client-page-title').textContent=c.name;
+  document.getElementById('bc-parent').textContent=c.name;
+  document.getElementById('bc-sep').style.display='none';
+
+  // CA shortcut
+  document.getElementById('ca-calc-shortcut').style.display=clientId==='ca'?'block':'none';
+
+  // Reset tabs
+  document.querySelectorAll('#client-status-tabs .status-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('ctab-all').classList.add('active');
+
+  renderClientDash(clientId);
+}
+
+function navBack(){
+  if(currentClient){ navClient(currentClient,document.getElementById('nav-'+currentClient)); }
+  else{ navTo('quotes',document.getElementById('nav-quotes')); }
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────────────────
+function refreshDash(){
+  const qs=state.quotes;
+  const pipeline=qs.filter(q=>q.status==='Pipeline').reduce((s,q)=>s+(q.total||0),0);
+  const approved=qs.filter(q=>q.status==='Approved').reduce((s,q)=>s+(q.total||0),0);
+  const fulfilled=qs.filter(q=>q.status==='Fulfilled').reduce((s,q)=>s+(q.total||0),0);
+  const total=pipeline+approved+fulfilled;
+
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Pipeline</div><div class="stat-value">${fmtInt(pipeline)}</div><div class="stat-sub">${qs.filter(q=>q.status==='Pipeline').length} quotes</div></div>
+    <div class="stat-card"><div class="stat-label">Approved</div><div class="stat-value">${fmtInt(approved)}</div><div class="stat-sub">${qs.filter(q=>q.status==='Approved').length} quotes</div></div>
+    <div class="stat-card"><div class="stat-label">Fulfilled</div><div class="stat-value">${fmtInt(fulfilled)}</div><div class="stat-sub">${qs.filter(q=>q.status==='Fulfilled').length} quotes</div></div>
+    <div class="stat-card"><div class="stat-label">Total all time</div><div class="stat-value">${fmtInt(total)}</div><div class="stat-sub">${qs.length} total quotes</div></div>
+  `;
+
+  const recent=qs.slice(0,6);
+  document.getElementById('dash-recent-quotes').innerHTML=recent.length?recent.map(q=>quoteRowHTML(q)).join(''):'<div style="text-align:center;padding:36px;color:var(--text3)">No quotes yet. <span style="color:var(--accent);cursor:pointer;font-weight:500" onclick="openNewQuoteModal(null)">Create one →</span></div>';
+
+  // Breakdown
+  const statuses=[{k:'Pipeline',label:'Pipeline',col:'#B8860B'},{k:'Approved',label:'Approved',col:'#1A6E40'},{k:'Fulfilled',label:'Fulfilled',col:'#1A1A2E'}];
+  const tv=total||1;
+  document.getElementById('dash-breakdown').innerHTML=statuses.map(s=>{
+    const v=qs.filter(q=>q.status===s.k).reduce((a,q)=>a+(q.total||0),0);
+    const pct=Math.round(v/tv*100);
+    return`<div class="breakdown-row"><div class="breakdown-label">${s.label}</div><div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:${pct}%;background:${s.col}"></div></div><div class="breakdown-count">${qs.filter(q=>q.status===s.k).length}</div><div class="breakdown-val">${fmtInt(v)}</div></div>`;
+  }).join('') || '<div style="color:var(--text3);font-size:12.5px">No quotes yet.</div>';
+
+  // By client
+  const clientMap={};
+  qs.forEach(q=>{ const c=q.client||'Unknown'; if(!clientMap[c])clientMap[c]=0; clientMap[c]+=(q.total||0); });
+  const sorted=Object.entries(clientMap).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('dash-clients').innerHTML=sorted.length?sorted.map(([name,val])=>{
+    const cid=Object.keys(CLIENTS).find(k=>CLIENTS[k].name===name)||'';
+    const col=CLIENTS[cid]?.color||'var(--text3)';
+    return`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="${cid?`navClient('${cid}',document.getElementById('nav-${cid}'))`:''}"><div style="width:8px;height:8px;border-radius:2px;background:${col};flex-shrink:0"></div><div style="flex:1;font-size:13px;font-weight:500;color:var(--text)">${name}</div><div style="font-size:12px;color:var(--text3);font-variant-numeric:tabular-nums">${fmtInt(val)}</div></div>`;
+  }).join(''):'<div style="color:var(--text3);font-size:12.5px">No data yet.</div>';
+}
+
+function renderClientDash(clientId){
+  const c=CLIENTS[clientId];
+  const qs=state.quotes.filter(q=>q.client===c.name);
+  const filtered=clientStatusFilter?qs.filter(q=>q.status===clientStatusFilter):qs;
+
+  const pipeline=qs.filter(q=>q.status==='Pipeline').reduce((s,q)=>s+(q.total||0),0);
+  const approved=qs.filter(q=>q.status==='Approved').reduce((s,q)=>s+(q.total||0),0);
+  const fulfilled=qs.filter(q=>q.status==='Fulfilled').reduce((s,q)=>s+(q.total||0),0);
+
+  document.getElementById('client-page-sub').textContent=`${qs.length} quote${qs.length!==1?'s':''} · ${fmtInt(pipeline+approved+fulfilled)} total`;
+
+  document.getElementById('client-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Pipeline</div><div class="stat-value">${fmtInt(pipeline)}</div><div class="stat-sub">${qs.filter(q=>q.status==='Pipeline').length} quotes</div></div>
+    <div class="stat-card"><div class="stat-label">Approved</div><div class="stat-value">${fmtInt(approved)}</div><div class="stat-sub">${qs.filter(q=>q.status==='Approved').length} quotes</div></div>
+    <div class="stat-card"><div class="stat-label">Fulfilled</div><div class="stat-value">${fmtInt(fulfilled)}</div><div class="stat-sub">${qs.filter(q=>q.status==='Fulfilled').length} quotes</div></div>
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${fmtInt(pipeline+approved+fulfilled)}</div><div class="stat-sub">${qs.length} quotes total</div></div>
+  `;
+
+  document.getElementById('client-quotes-list').innerHTML=filtered.length?filtered.map(q=>quoteRowHTML(q)).join(''):`<div style="text-align:center;padding:36px;color:var(--text3)">No ${clientStatusFilter?clientStatusFilter.toLowerCase()+' ':' '}quotes. <span style="color:var(--accent);cursor:pointer;font-weight:500" onclick="openNewQuoteModal('${clientId}')">Create one →</span></div>`;
+}
+
+function filterClientStatus(status, el){
+  clientStatusFilter=status;
+  document.querySelectorAll('#client-status-tabs .status-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderClientDash(currentClient);
+}
+
+// ── ALL QUOTES ─────────────────────────────────────────────────────────
+function renderAllQuotes(){
+  let qs=state.quotes;
+  if(quotesFilter) qs=qs.filter(q=>(q.client+q.title+q.num).toLowerCase().includes(quotesFilter.toLowerCase()));
+  if(quotesStatusFilter) qs=qs.filter(q=>q.status===quotesStatusFilter);
+  document.getElementById('quotes-sub').textContent=qs.length+' quote'+(qs.length!==1?'s':'');
+  document.getElementById('all-quotes-list').innerHTML=qs.length?qs.map(q=>quoteRowHTML(q)).join(''):'<div style="text-align:center;padding:36px;color:var(--text3)">No quotes found.</div>';
+}
+function filterQuotes(v){ quotesFilter=v; renderAllQuotes(); }
+function filterStatus(v){ quotesStatusFilter=v; renderAllQuotes(); }
+
+function quoteRowHTML(q){
+  const badges={Pipeline:'badge-pipeline',Approved:'badge-approved',Fulfilled:'badge-fulfilled'};
+  return`<div class="quote-row" onclick="openQuote('${q.id}')">
+    <div class="q-num">${q.num}</div>
+    <div class="q-client">${q.client}</div>
+    <div class="q-title">${q.title||'—'}</div>
+    <span class="badge ${badges[q.status]||'badge-grey'}">${q.status||'Pipeline'}</span>
+    <div class="q-amount">${fmt(q.total||0)}</div>
+    <div class="q-date">${q.date||''}</div>
+  </div>`;
+}
+
+// ── NEW QUOTE MODAL ────────────────────────────────────────────────────
+function openNewQuoteModal(clientId){
+  nqAssets=[];
+  document.getElementById('nq-preview').style.display='none';
+  document.getElementById('nq-ai-loading').style.display='none';
+  document.getElementById('nq-step2-back').style.display='block';
+  document.getElementById('nq-num').value=autoNum();
+  document.getElementById('nq-date').value=today();
+  document.getElementById('nq-contact').value='';
+  const nqti=document.getElementById('nq-title-input');if(nqti)nqti.value='';
+  document.getElementById('nq-notes').value='';
+  document.getElementById('nq-csv-input').value='';
+  document.getElementById('nq-text-input').value='';
+  clearParseStatus('file'); clearParseStatus('csv'); clearParseStatus('text');
+  nqGoStep(1);
+  nqSwitchTab('upload');
+
+  const c=clientId?CLIENTS[clientId]:null;
+
+  // Store client context
+  const mt=document.getElementById('nq-modal-title');if(mt){mt.dataset.cid=clientId||'';mt.textContent=c?`New Quote — ${c.name}`:'New Quote';}
+  document.getElementById('new-quote-modal').classList.add('open');
+}
+function closeNewQuoteModal(){ document.getElementById('new-quote-modal').classList.remove('open'); }
+function closeNQModal(){ closeNewQuoteModal(); }
+
+function nqGoStep(n){
+  document.getElementById('nq-step-1').style.display=n===1?'block':'none';
+  document.getElementById('nq-step-2').style.display=n===2?'block':'none';
+}
+
+function nqSwitchTab(tab){
+  ['upload','csv','text'].forEach(t=>{
+    document.getElementById('nqtab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('nqpanel-'+t).classList.toggle('active',t===tab);
+  });
+}
+
+function setParseStatus(panel, st, msg){
+  const el=document.getElementById('nq-'+panel+'-status');
+  if(!el)return;
+  el.className='parse-status';
+  if(st){ el.classList.add(st); const m=document.getElementById('nq-'+panel+'-msg'); if(m)m.textContent=msg||''; }
+}
+function clearParseStatus(panel){ setParseStatus(panel,''); }
+
+// File upload
+function nqHandleFile(file){
+  if(!file)return;
+  setParseStatus('file','loading','Reading file…');
+  const name=file.name.toLowerCase();
+  if(name.endsWith('.xlsx')||name.endsWith('.xls')){ nqParseExcel(file); }
+  else if(name.endsWith('.csv')){ const r=new FileReader(); r.onload=e=>nqParseCSVText(e.target.result,'file'); r.readAsText(file); }
+  else{ const r=new FileReader(); r.onload=e=>nqParseRawText(e.target.result,'file'); r.readAsText(file); }
+}
+
+function nqParseExcel(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      const csv=XLSX.utils.sheet_to_csv(ws);
+      nqParseCSVText(csv,'file');
+    }catch(err){ setParseStatus('file','error','Could not read Excel file: '+err.message); }
+  };
+  reader.onerror=()=>setParseStatus('file','error','Failed to read file');
+  reader.readAsBinaryString(file);
+}
+
+function nqParseCSVText(text, panel){
+  const lines=text.replace(/\r/g,'').split('\n').map(l=>l.trim()).filter(l=>l.length>2);
+  const assets=[];
+  for(const line of lines){
+    const cols=line.split(',').map(c=>c.replace(/^"|"$/g,'').trim());
+    const name=cols[0];
+    if(!name||/^(asset|deliverable|item|name|description)/i.test(name))continue;
+    const a=buildAsset(name);
+    // Apply CSV overrides if provided
+    if(cols[1]&&RATE_CARD[cols[1]]!==undefined){ a.roles[0].role=cols[1]; a.roles[0].rate=RATE_CARD[cols[1]]; }
+    if(cols[3]&&parseFloat(cols[3])) a.roles[0].hours=parseFloat(cols[3]);
+    if(cols[4]&&parseFloat(cols[4])) a.roles[0].rate=parseFloat(cols[4]);
+    assets.push(a);
+  }
+  if(assets.length){ nqShowPreview(assets,panel); }
+  else{ setParseStatus(panel,'error','No assets found. Check format or try plain text.'); }
+}
+
+function nqParseText(){ nqParseRawText(document.getElementById('nq-text-input').value,'text'); }
+function nqParseCSV(){ nqParseCSVText(document.getElementById('nq-csv-input').value,'csv'); }
+
+function nqParseRawText(text, panel){
+  if(!text||!text.trim()){ setParseStatus(panel,'error','Please paste some content first'); return; }
+  const lines=text.replace(/\r/g,'').split('\n').map(l=>l.trim()).filter(l=>l.length>2);
+  const assets=[];
+  for(const line of lines){
+    const clean=line.replace(/^[\-\*\•\–\—·]+\s*/,'').replace(/^\d+[.):\s]\s*/,'').trim();
+    if(!clean||clean.length<3)continue;
+    if(/^(#|\*\*|section|category|tier|group|assets?:)/i.test(clean)&&clean.split(' ').length<4)continue;
+    assets.push(buildAsset(clean));
+  }
+  if(assets.length){ nqShowPreview(assets,panel); }
+  else{ setParseStatus(panel,'error','No assets detected. Try one item per line.'); }
+}
+
+function nqFormatText(){
+  const ta=document.getElementById('nq-text-input');
+  const lines=ta.value.replace(/\r/g,'').split('\n');
+  const cleaned=lines.map(l=>{
+    let c=l.trim().replace(/^[\-\*\•\–\—·]+\s*/,'').replace(/^\d+[.):\s]\s*/,'').trim();
+    return c.length>2?c:null;
+  }).filter(Boolean);
+  ta.value=cleaned.join('\n');
+  toast('Text formatted ✓');
+}
+
+// nqAssets holds array of {name, type, roles:[{role,qty,hours,rate}]}
+let nqAssets=[];
+
+const inSt='padding:5px 7px;font-size:12.5px;border:1px solid var(--border3);border-radius:var(--r-xs);font-family:var(--font-body);background:var(--surface-inset);color:var(--text)';
+
+function renderAssetBlock(a, ai, prefix){
+  const assetTotal=a.roles.reduce((s,r)=>s+(r.qty||1)*(r.hours||0)*(r.rate||0),0);
+  const svgArrow="url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2710%27 height=%276%27%3E%3Cpath d=%27M1 1l4 4 4-4%27 stroke=%27%239C9A93%27 stroke-width=%271.5%27 fill=%27none%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E')";
+  const selStyle=`${inSt};width:100%;padding-right:24px;background-image:${svgArrow};background-repeat:no-repeat;background-position:right 8px center;-webkit-appearance:none;appearance:none`;
+  const numSt=`${inSt};text-align:center`;
+
+  const roleRows=a.roles.map((r,ri)=>{
+    const tot=(r.qty||1)*(r.hours||0)*(r.rate||0);
+    return`<div style="display:grid;grid-template-columns:1fr 52px 60px 72px 88px 28px;gap:4px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--border)">
+      <select onchange="${prefix}RoleChange(${ai},${ri},this)" style="${selStyle}">${roleOpts(r.role)}</select>
+      <input type="number" value="${r.qty||1}" min="1" style="${numSt};width:52px" onchange="${prefix}Field(${ai},${ri},'qty',this.value)">
+      <input type="number" value="${r.hours||2}" min="0" step="0.5" style="${numSt};width:60px" onchange="${prefix}Field(${ai},${ri},'hours',this.value)">
+      <input type="number" value="${r.rate||0}" min="0" style="${inSt};width:72px" onchange="${prefix}Field(${ai},${ri},'rate',this.value)">
+      <div style="font-weight:600;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--text)" id="${prefix}-rt-${ai}-${ri}">${fmt(tot)}</div>
+      ${a.roles.length>1?`<button onclick="${prefix}RemRole(${ai},${ri})" style="width:22px;height:22px;border-radius:50%;border:none;background:var(--red-bg);color:var(--red);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>`:'<div></div>'}
+    </div>`;
+  }).join('');
+
+  return`<div style="display:flex;border-bottom:1.5px solid var(--border2)" id="${prefix}-ag-${ai}">
+    <div style="width:200px;flex-shrink:0;border-right:1px solid var(--border);padding:10px 12px;display:flex;flex-direction:column;gap:4px;background:var(--surface-inset)">
+      <input type="text" value="${(a.name||'').replace(/"/g,'&quot;')}" onchange="${prefix}Name(${ai},this.value)" style="padding:5px 7px;font-size:12.5px;font-weight:500;border:1px solid var(--border3);border-radius:var(--r-xs);font-family:var(--font-body);background:var(--surface);color:var(--text);width:100%">
+      <div style="font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums" id="${prefix}-at-${ai}">Asset total: ${fmt(assetTotal)}</div>
+      <button onclick="${prefix}AddRole(${ai})" style="font-size:11.5px;color:var(--accent);background:none;border:none;cursor:pointer;text-align:left;padding:0;font-family:var(--font-body);font-weight:500">+ Add role</button>
+    </div>
+    <div style="flex:1;min-width:0">
+      ${roleRows}
+    </div>
+  </div>`;
+}
+
+// Preview callbacks
+function nqRoleChange(ai,ri,sel){ const rate=parseFloat(sel.options[sel.selectedIndex].dataset.rate)||0; nqAssets[ai].roles[ri].role=sel.value; nqAssets[ai].roles[ri].rate=rate; nqRefresh(ai,ri); }
+function nqField(ai,ri,f,v){ nqAssets[ai].roles[ri][f]=parseFloat(v)||0; nqRefresh(ai,ri); }
+function nqName(ai,v){ nqAssets[ai].name=v; }
+function nqRemRole(ai,ri){ nqAssets[ai].roles.splice(ri,1); nqRenderAll(); }
+function nqAddRole(ai){ nqAssets[ai].roles.push({role:'Designer',qty:1,hours:2,rate:200}); nqRenderAll(); }
+function nqRefresh(ai,ri){
+  const r=nqAssets[ai].roles[ri]; const tot=(r.qty||1)*(r.hours||0)*(r.rate||0);
+  const el=document.getElementById('nq-rt-'+ai+'-'+ri); if(el)el.textContent=fmt(tot);
+  const at=document.getElementById('nq-at-'+ai); if(at)at.textContent=fmt(nqAssets[ai].roles.reduce((s,x)=>s+(x.qty||1)*(x.hours||0)*(x.rate||0),0));
+}
+function nqRenderAll(){ document.getElementById('nq-preview-body').innerHTML=nqAssets.map((a,i)=>renderAssetBlock(a,i,'nq')).join(''); }
+
+function nqShowPreview(assets, panel){
+  nqAssets=assets;
+  setParseStatus(panel,'success',assets.length+' asset'+(assets.length!==1?'s':'')+' found — roles pre-assigned, all editable');
+  document.getElementById('nq-preview-count').textContent=assets.length;
+  nqRenderAll();
+  document.getElementById('nq-preview').style.display='block';
+}
+
+function clearNQPreview(){ nqAssets=[]; document.getElementById('nq-preview').style.display='none'; }
+
+function nqCreate(){
+  if(!nqAssets.length){ toast('No assets to create estimate from'); return; }
+  const num=document.getElementById('nq-num').value.trim()||autoNum();
+  const date=document.getElementById('nq-date').value.trim()||today();
+  const contact=document.getElementById('nq-contact').value.trim();
+  const title=document.getElementById('nq-title-input').value.trim();
+  const notes=document.getElementById('nq-notes').value.trim();
+  const clientId=document.getElementById('nq-modal-title').dataset.cid||null;
+  const clientName=clientId?CLIENTS[clientId].name:(currentClient?CLIENTS[currentClient].name:'Unknown');
+  const isCA=clientId?(CLIENTS[clientId]?.isCA||false):false;
+  const assets=nqAssets.map(a=>({...a,roles:a.roles.map(r=>({...r}))}));
+  const sLines=isCA?[]:buildSummaryLines(assets);
+  const sub=assets.reduce((s,a)=>s+a.roles.reduce((t,r)=>t+(r.qty||1)*(r.hours||0)*(r.rate||0),0),0)+sLines.reduce((s,l)=>s+calcSummaryLineTotal(l),0);
+  const grand=sub*1.1;
+  state.currentQuote={id:'Q'+Date.now(),num,date,contact,title,notes,client:clientName,clientId,isCA,assets,status:'Pipeline',total:grand};
+  closeNQModal();
+  openQuoteDetail(state.currentQuote);
+}
+
+// ── QUOTE DETAIL ───────────────────────────────────────────────────────
+function openQuote(id){
+  const q=state.quotes.find(x=>x.id===id);
+  if(!q)return;
+  state.currentQuote=JSON.parse(JSON.stringify(q));
+  openQuoteDetail(state.currentQuote);
+}
+
+function openQuoteDetail(q){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-quote').classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  document.getElementById('bc-parent').textContent=q.client;
+  document.getElementById('bc-sep').style.display='inline';
+  document.getElementById('bc-child').textContent=q.num;
+  goQuoteStep(1,true);
+}
+
+function goQuoteStep(n, init){
+  for(let i=1;i<=3;i++){
+    document.getElementById('qs-'+i).style.display=i===n?'block':'none';
+    const btn=document.getElementById('qs-btn-'+i);
+    btn.classList.toggle('active',i===n);
+    btn.classList.toggle('done',i<n);
+    if(i<n) btn.querySelector('.step-num').innerHTML='<svg viewBox="0 0 10 8" fill="none" width="10" height="10"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    else btn.querySelector('.step-num').textContent=i;
+  }
+  if(n===1) renderStep1();
+  if(n===2){ saveStep1(); renderEstimate(); }
+  if(n===3) renderReview();
+}
+
+function renderStep1(){
+  const q=state.currentQuote;
+  document.getElementById('q-num').value=q.num||'';
+  document.getElementById('q-date').value=q.date||'';
+  document.getElementById('q-client').value=q.client||'';
+  document.getElementById('q-contact').value=q.contact||'';
+  document.getElementById('q-title').value=q.title||'';
+  document.getElementById('q-notes').value=q.notes||'';
+}
+
+function saveStep1(){
+  const q=state.currentQuote;
+  q.num=document.getElementById('q-num').value.trim();
+  q.date=document.getElementById('q-date').value.trim();
+  q.contact=document.getElementById('q-contact').value.trim();
+  q.title=document.getElementById('q-title').value.trim();
+  q.notes=document.getElementById('q-notes').value.trim();
+}
+
+// Estimate callbacks
+function estRoleChange(ai,ri,sel){ const rate=parseFloat(sel.options[sel.selectedIndex].dataset.rate)||0; state.currentQuote.assets[ai].roles[ri].role=sel.value; state.currentQuote.assets[ai].roles[ri].rate=rate; estRefreshRow(ai,ri); renderSummary(); }
+function estField(ai,ri,f,v){ state.currentQuote.assets[ai].roles[ri][f]=parseFloat(v)||0; estRefreshRow(ai,ri); renderSummary(); }
+function estName(ai,v){ state.currentQuote.assets[ai].name=v; }
+function estRemRole(ai,ri){ state.currentQuote.assets[ai].roles.splice(ri,1); renderEstimate(); }
+function estAddRole(ai){ state.currentQuote.assets[ai].roles.push({role:'Designer',qty:1,hours:2,rate:200}); renderEstimate(); }
+function estRefreshRow(ai,ri){
+  const r=state.currentQuote.assets[ai].roles[ri]; const tot=(r.qty||1)*(r.hours||0)*(r.rate||0);
+  const el=document.getElementById('est-rt-'+ai+'-'+ri); if(el)el.textContent=fmt(tot);
+  const at=document.getElementById('est-at-'+ai); if(at)at.textContent=fmt(state.currentQuote.assets[ai].roles.reduce((s,x)=>s+(x.qty||1)*(x.hours||0)*(x.rate||0),0));
+}
+
+function renderEstimate(){
+  const q=state.currentQuote;
+  const assets=q.assets||[];
+  document.getElementById('qs-est-subtitle').textContent=assets.length+' asset'+(assets.length!==1?'s':'')+' · Edit roles, hours and rates below';
+  // Render assets
+  let html=assets.map((a,ai)=>renderAssetBlock(a,ai,'est')).join('');
+  // Auto summary lines (not CA)
+  if(!q.isCA){
+    const sLines=buildSummaryLines(assets);
+    html+=sLines.map((l,li)=>`<div style="display:flex;border-bottom:2px solid var(--border2);background:${li===0?'var(--amber-bg)':'#F5F3FF'}">
+      <div style="width:200px;flex-shrink:0;border-right:1px solid var(--border);padding:10px;display:flex;flex-direction:column;gap:2px">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${l.name}</div>
+        <div style="font-size:10.5px;color:var(--text4)">${l.label}</div>
+      </div>
+      <div style="flex:1">
+        <div style="display:grid;grid-template-columns:1fr 52px 60px 72px 88px 28px;gap:6px;align-items:center;padding:6px 10px">
+          <div style="font-size:13px;color:var(--text2);font-weight:500">${l.role}</div>
+          <div style="font-size:12px;color:var(--text3);text-align:center">1</div>
+          <input type="number" value="${l.hours}" min="0" step="0.5" style="${inSt};width:62px" onchange="updateAutoLine(${li},this.value)">
+          <div style="font-size:12px;color:var(--text3)">$${l.rate}/hr</div>
+          <div style="font-weight:600;font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums" id="auto-tot-${li}">${fmt(calcSummaryLineTotal(l))}</div>
+          <div></div>
+        </div>
+      </div>
+    </div>`).join('');
+  }
+  document.getElementById('est-body').innerHTML=html;
+  renderSummary();
+  const sel=document.getElementById('q-status');
+  if(sel) sel.value=q.status||'Pipeline';
+}
+
+function updateAutoLine(li,val){
+  const q=state.currentQuote;
+  if(!q._autoOverride)q._autoOverride={};
+  q._autoOverride[li]=parseFloat(val)||0;
+  const sLines=buildSummaryLines(q.assets||[]);
+  sLines[li].hours=q._autoOverride[li];
+  const el=document.getElementById('auto-tot-'+li); if(el)el.textContent=fmt(calcSummaryLineTotal(sLines[li]));
+  renderSummary();
+}
+
+function renderSummary(){
+  const q=state.currentQuote;
+  const assets=q.assets||[];
+  const assetSub=assets.reduce((s,a)=>s+a.roles.reduce((t,r)=>t+(r.qty||1)*(r.hours||0)*(r.rate||0),0),0);
+  let sTotal=0;
+  if(!q.isCA){
+    const sLines=buildSummaryLines(assets);
+    if(q._autoOverride){Object.keys(q._autoOverride).forEach(li=>{sLines[li].hours=q._autoOverride[li];});}
+    sTotal=sLines.reduce((s,l)=>s+calcSummaryLineTotal(l),0);
+  }
+  const sub=assetSub+sTotal; const gst=sub*0.1; const grand=sub+gst;
+  q.total=grand;
+  document.getElementById('est-summary').innerHTML=`
+    <div class="summary-line"><span class="summary-label">Asset labour</span><span class="summary-amount">${fmt(assetSub)}</span></div>
+    ${!q.isCA?`<div class="summary-line"><span class="summary-label">Mgmt & ECD</span><span class="summary-amount">${fmt(sTotal)}</span></div>`:''}
+    <div class="summary-line"><span class="summary-label">Subtotal (ex-GST)</span><span class="summary-amount">${fmt(sub)}</span></div>
+    <div class="summary-line"><span class="summary-label">GST (10%)</span><span class="summary-amount">${fmt(gst)}</span></div>
+    <div class="summary-line grand"><span class="summary-label">Total</span><span class="summary-amount">${fmt(grand)}</span></div>`;
+}
+
+function updateStatus(val){
+  if(state.currentQuote) state.currentQuote.status=val;
+  const sel1=document.getElementById('q-status');
+  const sel3=document.getElementById('q-status-3');
+  if(sel1) sel1.value=val;
+  if(sel3) sel3.value=val;
+}
+
+function addAssetLine(){
+  state.currentQuote.assets.push(buildAsset('New asset'));
+  renderEstimate();
+}
+
+function reprocessAssets(){
+  openNewQuoteModal(state.currentQuote.clientId||null);
+}
+
+function renderReview(){
+  const q=state.currentQuote;
+  const assets=q.assets||[];
+  const assetSub=assets.reduce((s,a)=>s+a.roles.reduce((t,r)=>t+(r.qty||1)*(r.hours||0)*(r.rate||0),0),0);
+  let sLines=[]; let sTotal=0;
+  if(!q.isCA){
+    sLines=buildSummaryLines(assets);
+    if(q._autoOverride){Object.keys(q._autoOverride).forEach(li=>{sLines[li].hours=q._autoOverride[li];});}
+    sTotal=sLines.reduce((s,l)=>s+calcSummaryLineTotal(l),0);
+  }
+  const sub=assetSub+sTotal; const gst=sub*0.1; const grand=sub+gst; q.total=grand;
+  document.getElementById('review-meta').innerHTML=`<div><strong>Quote:</strong> ${q.num}</div><div><strong>Client:</strong> ${q.client}${q.contact?' ('+q.contact+')':''}</div><div><strong>Project:</strong> ${q.title||'—'}</div><div><strong>Date:</strong> ${q.date}</div>`;
+  document.getElementById('review-lines').innerHTML=assets.map(a=>{
+    const at=a.roles.reduce((s,r)=>s+(r.qty||1)*(r.hours||0)*(r.rate||0),0);
+    return`<div class="info-row" style="flex-direction:column;align-items:flex-start;gap:3px;padding-bottom:10px">
+      <div style="display:flex;justify-content:space-between;width:100%"><span style="font-weight:500;font-size:13px">${a.name}</span><span style="font-weight:600;font-size:13px">${fmt(at)}</span></div>
+      ${a.roles.map(r=>`<div style="font-size:11.5px;color:var(--text3);padding-left:10px">${r.role} · ${r.qty}×${r.hours}hr @ $${r.rate}/hr = ${fmt((r.qty||1)*(r.hours||0)*(r.rate||0))}</div>`).join('')}
+    </div>`;
+  }).join('')+sLines.map(l=>`<div class="info-row"><span style="font-size:13px;color:var(--text2)">${l.name} <span style="font-size:11.5px;color:var(--text4)">${l.role} · ${l.hours}hr @ $${l.rate}/hr</span></span><span style="font-weight:600;font-size:13px">${fmt(calcSummaryLineTotal(l))}</span></div>`).join('');
+  document.getElementById('review-totals').innerHTML=`<div class="info-row"><span style="color:var(--text2)">Subtotal (ex-GST)</span><span style="font-weight:500">${fmt(sub)}</span></div><div class="info-row"><span style="color:var(--text2)">GST (10%)</span><span style="font-weight:500">${fmt(gst)}</span></div><div class="info-row" style="border-top:1.5px solid var(--text);margin-top:4px;padding-top:10px"><span style="font-weight:700;font-size:15px">Total</span><span style="font-weight:700;font-size:17px">${fmt(grand)}</span></div>`;
+  document.getElementById('review-rail').innerHTML=`<div class="summary-line"><span class="summary-label">Subtotal</span><span class="summary-amount">${fmt(sub)}</span></div><div class="summary-line"><span class="summary-label">GST</span><span class="summary-amount">${fmt(gst)}</span></div><div class="summary-line grand"><span class="summary-label">Total</span><span class="summary-amount">${fmt(grand)}</span></div>`;
+  const s3=document.getElementById('q-status-3'); if(s3) s3.value=q.status||'Pipeline';
+}
+
+function saveQuote(){
+  const q=state.currentQuote;
+  const idx=state.quotes.findIndex(x=>x.id===q.id);
+  if(idx>=0)state.quotes[idx]=JSON.parse(JSON.stringify(q));
+  else state.quotes.unshift(JSON.parse(JSON.stringify(q)));
+  saveState();toast('Quote saved ✓');refreshDash();
+  if(q.clientId)navClient(q.clientId,document.getElementById('nav-'+q.clientId));
+  else navTo('quotes',document.getElementById('nav-quotes'));
+}
+
+// ── EXPORT CSV ─────────────────────────────────────────────────────────
+function exportQuoteCSV(){
+  const q=state.currentQuote;
+  const assets=q.assets||[];
+
+  // Build summary lines
+  let sLines=[];
+  if(!q.isCA){
+    sLines=buildSummaryLines(assets);
+    if(q._autoOverride){Object.keys(q._autoOverride).forEach(li=>{sLines[li].hours=q._autoOverride[li];});}
+  }
+
+  // Calc totals
+  const assetSub=assets.reduce((s,a)=>s+a.roles.reduce((t,r)=>t+(r.qty||1)*(r.hours||0)*(r.rate||0),0),0);
+  const sTotal=sLines.reduce((s,l)=>s+calcSummaryLineTotal(l),0);
+  const sub=assetSub+sTotal;
+  const gst=sub*0.1;
+  const grand=sub+gst;
+
+  const rows=[
+    ['Quotecraft — Eavesdrop Internal'],
+    [''],
+    ['Quote',q.num,'Date',q.date],
+    ['Client',q.client,'Contact',q.contact||''],
+    ['Project',q.title||'','Status',q.status||'Pipeline'],
+    [''],
+    ['Asset','Role','Qty','Hrs','Rate/hr (ex-GST)','Line Total (ex-GST)','Asset Total (ex-GST)'],
+  ];
+
+  // Asset rows
+  assets.forEach(a=>{
+    const assetTotal=a.roles.reduce((s,r)=>s+(r.qty||1)*(r.hours||0)*(r.rate||0),0);
+    a.roles.forEach((r,ri)=>{
+      const lineTotal=(r.qty||1)*(r.hours||0)*(r.rate||0);
+      rows.push([
+        ri===0 ? a.name : '',
+        r.role,
+        r.qty||1,
+        r.hours||0,
+        r.rate||0,
+        lineTotal.toFixed(2),
+        ri===0 ? assetTotal.toFixed(2) : ''
+      ]);
+    });
+    rows.push(['','','','','','','']); // spacer between assets
+  });
+
+  // Summary lines
+  if(sLines.length){
+    rows.push(['']);
+    sLines.forEach(l=>{
+      const lineTotal=calcSummaryLineTotal(l);
+      rows.push([l.name, l.role, l.qty||1, l.hours, l.rate, lineTotal.toFixed(2), '']);
+    });
+  }
+
+  // Totals
+  rows.push(
+    [''],
+    ['Subtotal (ex-GST)','','','','','',sub.toFixed(2)],
+    ['GST (10%)','','','','','',gst.toFixed(2)],
+    ['TOTAL (inc. GST)','','','','','',grand.toFixed(2)]
+  );
+
+  if(q.notes) rows.push([''],['Notes',q.notes]);
+
+  const csv=rows.map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const uri='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  const a=document.createElement('a');a.href=uri;a.download=(q.num||'quote')+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  toast('CSV exported ✓');
+}
+
+// ── CA CALCULATOR ──────────────────────────────────────────────────────
+function caFmt(n){ return n===0?'$0':'$'+n.toLocaleString('en-AU'); }
+
+function caCalc(){
+  const t1vSize=parseFloat(document.getElementById('ca-t1v-size').value)||0;
+  const t1vRefresh=document.getElementById('ca-t1v-refresh').value==='yes';
+  const t1vNew=parseInt(document.getElementById('ca-t1v-new').value)||0;
+  const t1vRef=parseInt(document.getElementById('ca-t1v-ref').value)||0;
+  const t1vAudio=document.getElementById('ca-t1v-audio').value==='yes';
+  const t1vAudioAdd=parseInt(document.getElementById('ca-t1v-audio-add').value)||0;
+  let t1vBase=t1vRefresh&&t1vSize>0?t1vSize*0.5:t1vSize;
+  const t1vTotal=t1vBase+(t1vNew*(t1vBase*0.30))+(t1vRef*(t1vBase*0.15))+(t1vAudio?1000:0)+(t1vAudioAdd*500);
+
+  const t1pSize=parseFloat(document.getElementById('ca-t1p-size').value)||0;
+  const t1pRefresh=document.getElementById('ca-t1p-refresh').value==='yes';
+  const t1pTotal=t1pRefresh&&t1pSize>0?t1pSize*0.5:t1pSize;
+
+  const t2Size=parseFloat(document.getElementById('ca-t2-size').value)||0;
+  const t2Refresh=document.getElementById('ca-t2-refresh').value==='yes';
+  const t2New=parseInt(document.getElementById('ca-t2-new').value)||0;
+  const t2Ref=parseInt(document.getElementById('ca-t2-ref').value)||0;
+  let t2Base=t2Refresh&&t2Size>0?t2Size*0.5:t2Size;
+  const t2Total=t2Base+(t2New*(t2Base*0.30))+(t2Ref*(t2Base*0.15));
+
+  const t3Size=parseFloat(document.getElementById('ca-t3-size').value)||0;
+  const t3Refresh=document.getElementById('ca-t3-refresh').value==='yes';
+  const t3New=parseInt(document.getElementById('ca-t3-new').value)||0;
+  const t3Ref=parseInt(document.getElementById('ca-t3-ref').value)||0;
+  let t3Base=t3Refresh&&t3Size>0?t3Size*0.5:t3Size;
+  const t3Total=t3Base+(t3New*(t3Base*0.30))+(t3Ref*(t3Base*0.15));
+
+  const grand=t1vTotal+t1pTotal+t2Total+t3Total;
+  document.getElementById('ca-t1v-total').textContent=caFmt(Math.round(t1vTotal));
+  document.getElementById('ca-t1p-total').textContent=caFmt(Math.round(t1pTotal));
+  document.getElementById('ca-t2-total').textContent=caFmt(Math.round(t2Total));
+  document.getElementById('ca-t3-total').textContent=caFmt(Math.round(t3Total));
+  document.getElementById('ca-sum-t1v').textContent=caFmt(Math.round(t1vTotal));
+  document.getElementById('ca-sum-t1p').textContent=caFmt(Math.round(t1pTotal));
+  document.getElementById('ca-sum-t2').textContent=caFmt(Math.round(t2Total));
+  document.getElementById('ca-sum-t3').textContent=caFmt(Math.round(t3Total));
+  document.getElementById('ca-grand-total').textContent=caFmt(Math.round(grand));
+  const anyRefresh=t1vRefresh||t1pRefresh||t2Refresh||t3Refresh;
+  document.getElementById('ca-refresh-note').style.display=anyRefresh?'block':'none';
+}
+
+function caReset(){
+  ['ca-t1v-size','ca-t1p-size','ca-t2-size','ca-t3-size'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['ca-t1v-refresh','ca-t1p-refresh','ca-t2-refresh','ca-t3-refresh'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='no';});
+  document.getElementById('ca-t1v-audio').value='no';
+  ['ca-t1v-new','ca-t1v-ref','ca-t1v-audio-add','ca-t2-new','ca-t2-ref','ca-t3-new','ca-t3-ref'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='0';});
+  const n=document.getElementById('ca-notes');if(n)n.value='';
+  caCalc(); toast('Calculator reset ✓');
+}
+
+function caCopyScope(){
+  const lines=['CRICKET AUSTRALIA — PRODUCTION FEE SCOPE','(CA approved fixed rates, ex-GST)','','Tier 1 — Television/Video & Radio: '+document.getElementById('ca-t1v-total').textContent,'Tier 1 — Photoshoots & Stills: '+document.getElementById('ca-t1p-total').textContent,'Tier 2 — Digital & Content Creation: '+document.getElementById('ca-t2-total').textContent,'Tier 3 — Print & OOH: '+document.getElementById('ca-t3-total').textContent,'─────────────────────────────','TOTAL (ex-GST): '+document.getElementById('ca-grand-total').textContent];
+  const notes=document.getElementById('ca-notes').value.trim();
+  if(notes){lines.push('');lines.push('Notes: '+notes);}
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>toast('Scope copied ✓')).catch(()=>toast('Copy failed'));
+}
+
+function caExportCSV(){
+  const rows=[['Cricket Australia — Production Fee Scope (ex-GST)'],[''],['Tier','Description','Amount (ex-GST)'],['Tier 1','Television / Video & Radio',document.getElementById('ca-t1v-total').textContent.replace(/[$,]/g,'')],['Tier 1','Photoshoots & Stills',document.getElementById('ca-t1p-total').textContent.replace(/[$,]/g,'')],['Tier 2','Digital & Content Creation',document.getElementById('ca-t2-total').textContent.replace(/[$,]/g,'')],['Tier 3','Print & OOH',document.getElementById('ca-t3-total').textContent.replace(/[$,]/g,'')],['','TOTAL (ex-GST)',document.getElementById('ca-grand-total').textContent.replace(/[$,]/g,'')]];
+  const notes=document.getElementById('ca-notes').value.trim();
+  if(notes) rows.push(['','Notes',notes]);
+  const csv=rows.map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const uri='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  const a=document.createElement('a');a.href=uri;a.download='ca-fee-scope.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url); toast('CSV exported ✓');
+}
+
+// ── CA AI INTERPRETER ──────────────────────────────────────────────────
+async function caInterpretAssets(){
+  const input=document.getElementById('ca-ai-input').value.trim();
+  if(!input){toast('Paste an asset list first');return;}
+  const apiKey=window.QI_OVERRIDE_KEY||(typeof QI_API_KEY!=='undefined'?QI_API_KEY:'');
+  if(!apiKey||apiKey.includes('placeholder')){toast('Add your Anthropic API key to enable AI features');return;}
+  const btn=document.getElementById('ca-ai-btn');
+  const status=document.getElementById('ca-ai-status');
+  btn.disabled=true;
+  status.innerHTML='<span class="loader"><span></span><span></span><span></span></span> Analysing…';
+  document.getElementById('ca-ai-result').style.display='none';
+
+  const prompt=`You are a production scoping expert for an Australian creative agency working with Cricket Australia. Analyse the asset list and recommend CA calculator settings.
+
+CA TIERS:
+T1 VIDEO: Major=3 masters $20k, Medium=2 masters $15k, Light=edit $10k. Audio +$1k, extra audio $500ea.
+T1 PHOTO: Major=16 hero $10k, Medium=8 images full day $7.5k, Light=8 images half day $4k.
+T2 DIGITAL (social, HTML banners, display): Major=5-10 masters $10k, Medium=3-4 $5k, Light=1-2 $2.5k.
+T3 PRINT/OOH: Major=5-10 $10k, Medium=3-4 $5k, Light=1-2 $2.5k.
+
+VERSIONING: State variations (NSW/VIC/QLD etc) are VERSIONS not masters. Count unique formats as masters.
+
+Return ONLY valid JSON:
+{"reasoning":"2-3 sentences","groups":[{"tier":"T2 Digital","description":"Social statics","masters":3,"versions":18,"notes":"3 formats x 6 states"}],"recommendation":{"t1v_size":"","t1v_refresh":"no","t1v_new_versions":0,"t1v_ref_versions":0,"t1v_audio":"no","t1v_audio_add":0,"t1p_size":"","t1p_refresh":"no","t2_size":"","t2_refresh":"no","t2_new_versions":0,"t2_ref_versions":0,"t3_size":"","t3_refresh":"no","t3_new_versions":0,"t3_ref_versions":0}}
+
+Asset list:
+"""${input}"""`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    const raw=data.content?.[0]?.text||'';
+    const match=raw.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!match)throw new Error('No JSON in response');
+    caLastRec=JSON.parse(match[0]);
+    caRenderInterpreterResult(caLastRec);
+    status.textContent='';
+  }catch(e){
+    status.textContent='⚠ '+(e.message||'Something went wrong');
+  }
+  btn.disabled=false;
+}
+
+function caRenderInterpreterResult(data){
+  document.getElementById('ca-ai-reasoning').textContent=data.reasoning||'';
+  const tierColors={'T1 Video':'#00A651','T1 Photo':'#00A651','T2 Digital':'#0052CC','T3 Print':'#7B2D8B'};
+  document.getElementById('ca-ai-tbody').innerHTML=(data.groups||[]).map((g,i)=>{
+    const col=tierColors[g.tier]||'#9C9A93';
+    return`<tr style="background:${i%2===0?'var(--surface)':'var(--surface-inset)'}">
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px;font-weight:500">${g.description}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border)"><span style="padding:2px 7px;border-radius:20px;font-size:10.5px;font-weight:700;color:#fff;background:${col}">${g.tier}</span></td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px;text-align:center">${g.masters}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px;text-align:center">${g.versions}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text3)">${g.notes||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const r=data.recommendation||{};
+  const labels={'20000':'Major ($20k)','15000':'Medium ($15k)','10000':'Light ($10k) / Major ($10k)','7500':'Medium ($7.5k)','4000':'Light ($4k)','5000':'Medium ($5k)','2500':'Light ($2.5k)','':'Not applicable'};
+  document.getElementById('ca-ai-config').innerHTML=[
+    {label:'T1 Video & Radio',val:labels[r.t1v_size]||'Not applicable',sub:r.t1v_size?`Refresh:${r.t1v_refresh==='yes'?' Yes':' No'} · New: ${r.t1v_new_versions||0} · Refreshed: ${r.t1v_ref_versions||0}`:''},
+    {label:'T1 Photoshoots',val:labels[r.t1p_size]||'Not applicable',sub:r.t1p_size?`Refresh:${r.t1p_refresh==='yes'?' Yes':' No'}`:''},
+    {label:'T2 Digital',val:labels[r.t2_size]||'Not applicable',sub:r.t2_size?`Refresh:${r.t2_refresh==='yes'?' Yes':' No'} · New: ${r.t2_new_versions||0} · Refreshed: ${r.t2_ref_versions||0}`:''},
+    {label:'T3 Print & OOH',val:labels[r.t3_size]||'Not applicable',sub:r.t3_size?`Refresh:${r.t3_refresh==='yes'?' Yes':' No'} · New: ${r.t3_new_versions||0} · Refreshed: ${r.t3_ref_versions||0}`:''},
+  ].map(c=>`<div style="padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm)"><div style="font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">${c.label}</div><div style="font-size:13px;font-weight:600;color:var(--text)">${c.val}</div>${c.sub?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${c.sub}</div>`:''}</div>`).join('');
+
+  document.getElementById('ca-ai-result').style.display='block';
+}
+
+function caApplyRecommendation(){
+  if(!caLastRec)return;
+  const r=caLastRec.recommendation;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+  const setN=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||0;};
+  set('ca-t1v-size',r.t1v_size);set('ca-t1v-refresh',r.t1v_refresh||'no');setN('ca-t1v-new',r.t1v_new_versions);setN('ca-t1v-ref',r.t1v_ref_versions);set('ca-t1v-audio',r.t1v_audio||'no');setN('ca-t1v-audio-add',r.t1v_audio_add);
+  set('ca-t1p-size',r.t1p_size);set('ca-t1p-refresh',r.t1p_refresh||'no');
+  set('ca-t2-size',r.t2_size);set('ca-t2-refresh',r.t2_refresh||'no');setN('ca-t2-new',r.t2_new_versions);setN('ca-t2-ref',r.t2_ref_versions);
+  set('ca-t3-size',r.t3_size);set('ca-t3-refresh',r.t3_refresh||'no');setN('ca-t3-new',r.t3_new_versions);setN('ca-t3-ref',r.t3_ref_versions);
+  caCalc();
+  toast('Recommendation applied ✓');
+  document.getElementById('screen-ca').querySelector('.card').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function caClearInterpreter(){
+  document.getElementById('ca-ai-input').value='';
+  document.getElementById('ca-ai-result').style.display='none';
+  document.getElementById('ca-ai-status').textContent='';
+  caLastRec=null;
+}
+
+// ── API KEY OVERRIDE (console helper) ─────────────────────────────────
+// Users can call: window.setApiKey('sk-ant-...') in the browser console
+window.setApiKey=function(key){ window.QI_OVERRIDE_KEY=key; toast('API key set ✓'); };
+
+// ── DRAG & DROP ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  const dz=document.getElementById('nq-drop-zone');
+  if(dz){
+    dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+    dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+    dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)nqHandleFile(f);});
+  }
+});
+</script>
+</body>
+</html>
