@@ -7,6 +7,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+
+// ── FILE NAMING ───────────────────────────────────────────────────────
+function qcFileName(clientName, ext){
+  const now=new Date();
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const d=String(now.getDate()).padStart(2,'0');
+  const m=months[now.getMonth()];
+  const y=now.getFullYear();
+  const hh=String(now.getHours()).padStart(2,'0');
+  const mm=String(now.getMinutes()).padStart(2,'0');
+  // camelCase: split on spaces/punctuation, capitalise each word, join
+  const safeName=(clientName||'Client')
+    .split(/[\s\-\.&_]+/)
+    .filter(Boolean)
+    .map(w=>w.replace(/[^a-zA-Z0-9]/g,''))
+    .filter(Boolean)
+    .map((w,i)=>i===0?w.charAt(0).toUpperCase()+w.slice(1):w.charAt(0).toUpperCase()+w.slice(1))
+    .join('');
+  return 'QC_'+safeName+'_'+d+m+y+'_'+hh+mm+'.'+ext;
+}
+
 // ── ADD CLIENT ────────────────────────────────────────────────────────
 let acCustomRates = {};
 
@@ -1624,8 +1645,10 @@ function renderEstimate(){
   // Auto summary lines (not CA)
   if(!q.isCA){
     const sLines=buildSummaryLines(assets);
-    html+=sLines.map((l,li)=>`<div style="display:flex;border-bottom:2px solid var(--border2);background:${li===0?'var(--amber-bg)':'#F5F3FF'}">
-      <div style="width:200px;flex-shrink:0;border-right:1px solid var(--border);padding:10px;display:flex;flex-direction:column;gap:2px">
+    if(q._autoOverride){Object.keys(q._autoOverride).forEach(li=>{sLines[li].hours=q._autoOverride[li];});}
+    html+='<div id="auto-summary-block" style="border-top:2px solid var(--border2)">';
+    html+=sLines.map((l,li)=>`<div style="display:flex;border-bottom:1px solid var(--border);background:${li===0?'var(--amber-bg)':'#F5F3FF'}">
+      <div style="width:200px;flex-shrink:0;border-right:1px solid var(--border);padding:10px;display:flex;flex-direction:column;gap:2px;background:${li===0?'var(--amber-bg)':'#F5F3FF'}">
         <div style="font-size:13px;font-weight:500;color:var(--text)">${l.name}</div>
         <div style="font-size:10.5px;color:var(--text4)">${l.label}</div>
       </div>
@@ -1640,6 +1663,7 @@ function renderEstimate(){
         </div>
       </div>
     </div>`).join('');
+    html+='</div>';
   }
   document.getElementById('est-body').innerHTML=html;
   renderSummary();
@@ -1796,10 +1820,11 @@ function exportQuoteCSV(){
 
   const csv=rows.map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
   const uri='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  const a=document.createElement('a');a.href=uri;a.download=(q.num||'quote')+'.csv';
+  const a=document.createElement('a');a.href=uri;a.download=qcFileName(q.client,'csv');
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   toast('CSV exported ✓');
 }
+
 
 // ── CA CALCULATOR ──────────────────────────────────────────────────────
 function caFmt(n){ return n===0?'$0':'$'+n.toLocaleString('en-AU'); }
@@ -1863,14 +1888,43 @@ function caCopyScope(){
 }
 
 function caExportCSV(){
-  const rows=[['Cricket Australia — Production Fee Scope (ex-GST)'],[''],['Tier','Description','Amount (ex-GST)'],['Tier 1','Television / Video & Radio',document.getElementById('ca-t1v-total').textContent.replace(/[$,]/g,'')],['Tier 1','Photoshoots & Stills',document.getElementById('ca-t1p-total').textContent.replace(/[$,]/g,'')],['Tier 2','Digital & Content Creation',document.getElementById('ca-t2-total').textContent.replace(/[$,]/g,'')],['Tier 3','Print & OOH',document.getElementById('ca-t3-total').textContent.replace(/[$,]/g,'')],['','TOTAL (ex-GST)',document.getElementById('ca-grand-total').textContent.replace(/[$,]/g,'')]];
+  function caSelLabel(selId){ const el=document.getElementById(selId); return el&&el.value?el.options[el.selectedIndex].text.split(' — ')[0].trim():'Not selected'; }
+  const t1vLabel=caSelLabel('ca-t1v-size');
+  const t1vRefresh=document.getElementById('ca-t1v-refresh').value==='yes';
+  const t1vNewV=parseInt(document.getElementById('ca-t1v-new').value)||0;
+  const t1vRefV=parseInt(document.getElementById('ca-t1v-ref').value)||0;
+  const t1vAudio=document.getElementById('ca-t1v-audio').value==='yes';
+  const t1vAudioAdd=parseInt(document.getElementById('ca-t1v-audio-add').value)||0;
+  const t1pLabel=caSelLabel('ca-t1p-size');
+  const t1pRefresh=document.getElementById('ca-t1p-refresh').value==='yes';
+  const t2Label=caSelLabel('ca-t2-size');
+  const t2Refresh=document.getElementById('ca-t2-refresh').value==='yes';
+  const t2NewV=parseInt(document.getElementById('ca-t2-new').value)||0;
+  const t2RefV=parseInt(document.getElementById('ca-t2-ref').value)||0;
+  const t3Label=caSelLabel('ca-t3-size');
+  const t3Refresh=document.getElementById('ca-t3-refresh').value==='yes';
+  const t3NewV=parseInt(document.getElementById('ca-t3-new').value)||0;
+  const t3RefV=parseInt(document.getElementById('ca-t3-ref').value)||0;
+
+  const rows=[
+    ['Cricket Australia — Production Fee Scope (ex-GST)'],[''],
+    ['Tier','Package','Refresh?','New Versions','Refreshed Versions','Amount (ex-GST)'],
+    ['T1 Video & Radio', t1vLabel, t1vRefresh?'Yes':'No', t1vNewV||'—', t1vRefV||'—', document.getElementById('ca-t1v-total').textContent.replace(/[$,]/g,'')],
+  ];
+  if(t1vAudio) rows.push(['T1 Audio', 'Audio project (+$1,000)', '—', t1vAudioAdd?t1vAudioAdd+' additional':'—', '—', 'Included in T1 total']);
+  rows.push(
+    ['T1 Photoshoots', t1pLabel, t1pRefresh?'Yes':'No', '—', '—', document.getElementById('ca-t1p-total').textContent.replace(/[$,]/g,'')],
+    ['T2 Digital & Content', t2Label, t2Refresh?'Yes':'No', t2NewV||'—', t2RefV||'—', document.getElementById('ca-t2-total').textContent.replace(/[$,]/g,'')],
+    ['T3 Print & OOH', t3Label, t3Refresh?'Yes':'No', t3NewV||'—', t3RefV||'—', document.getElementById('ca-t3-total').textContent.replace(/[$,]/g,'')],
+    ['','','','','TOTAL (ex-GST)', document.getElementById('ca-grand').textContent.replace(/[$,]/g,'')]
+  );
   const notes=document.getElementById('ca-notes').value.trim();
-  if(notes) rows.push(['','Notes',notes]);
+  if(notes) rows.push([''],['Notes','',notes]);
   const csv=rows.map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
   const uri='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  const a=document.createElement('a');a.href=uri;a.download='ca-fee-scope.csv';
+  const a=document.createElement('a');a.href=uri;a.download=qcFileName('CricketAustralia','csv');
   document.body.appendChild(a);a.click();document.body.removeChild(a);
-  URL.revokeObjectURL(url); toast('CSV exported ✓');
+  toast('CSV exported ✓');
 }
 
 // ── CA AI INTERPRETER ──────────────────────────────────────────────────
@@ -1977,6 +2031,27 @@ document.addEventListener('DOMContentLoaded',()=>{
     dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)nqHandleFile(f);});
   }
 });
+
+
+// ── FILE NAMING ───────────────────────────────────────────────────────
+function qcFileName(clientName, ext){
+  const now=new Date();
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const d=String(now.getDate()).padStart(2,'0');
+  const m=months[now.getMonth()];
+  const y=now.getFullYear();
+  const hh=String(now.getHours()).padStart(2,'0');
+  const mm=String(now.getMinutes()).padStart(2,'0');
+  // camelCase: split on spaces/punctuation, capitalise each word, join
+  const safeName=(clientName||'Client')
+    .split(/[\s\-\.&_]+/)
+    .filter(Boolean)
+    .map(w=>w.replace(/[^a-zA-Z0-9]/g,''))
+    .filter(Boolean)
+    .map((w,i)=>i===0?w.charAt(0).toUpperCase()+w.slice(1):w.charAt(0).toUpperCase()+w.slice(1))
+    .join('');
+  return 'QC_'+safeName+'_'+d+m+y+'_'+hh+mm+'.'+ext;
+}
 
 // ── ADD CLIENT ────────────────────────────────────────────────────────
 let acCustomRates = {};
@@ -2106,9 +2181,9 @@ let tourDummyQuoteId = null;
 
 const TOUR_STEPS = [
   { target:'#sb-clients',      nav:'dashboard', text:'Your clients live here. Pick one to see their quote history, or hit Overview for the full picture.' },
-  { target:'#btn-new-quote',   nav:'dashboard', text:'Start here. Paste your asset list — one asset per line. The tool reads each line and assigns roles and rates automatically.' },
+  { target:'#btn-new-quote',   nav:'dashboard', text:'Paste your asset list — one asset per line. The tool reads each line and assigns roles and rates automatically.' },
   { target:'#est-body',        nav:'quote',     text:'Every asset gets its default roles pre-assigned. Hours and rates are all editable — just click in.' },
-  { target:'#auto-tot-0',      nav:'quote',     text:'These two lines are automatic. Dispatch scales with asset count, ECD is fixed. You can override the hours if needed.' },
+  { target:'#auto-summary-block', nav:'quote',  text:'Two lines are added automatically to every estimate. Senior Account Manager handles dispatch & asset management — defaulting to 0.5hr per asset. ECD covers campaign oversight — fixed at 2hrs. Both are editable if the job needs more or less.' },
   { target:'#q-status',        nav:'quote',     text:'Move quotes from Pipeline → Approved → Fulfilled as the job progresses.' },
   { target:'#tour-export-btn', nav:'quote',     text:'Exports a full breakdown — asset by asset, role by role — ready to drop into a client estimate.' },
   { target:'#nav-ca',          nav:'dashboard', text:'Cricket Australia works differently. Fixed CA rates, no auto lines. Use the calculator for all CA scoping.' },
