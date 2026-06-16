@@ -6,7 +6,132 @@
 <title>Quotecraft — Eavesdrop Internal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+// ── ADD CLIENT ────────────────────────────────────────────────────────
+let acCustomRates = {};
+
+function openAddClientModal(){
+  acCustomRates={};
+  document.getElementById('ac-name').value='';
+  document.getElementById('ac-color-pick').value='#2748D6';
+  document.getElementById('ac-desc').value='';
+  document.getElementById('ac-s1').style.display='block';
+  document.getElementById('ac-s2').style.display='none';
+  document.getElementById('ac-modal-sub').textContent='Step 1 of 2 — Client details';
+  document.getElementById('add-client-modal').classList.add('open');
+}
+
+function closeAddClientModal(){
+  document.getElementById('add-client-modal').classList.remove('open');
+}
+
+function acStep2(){
+  const name=document.getElementById('ac-name').value.trim();
+  if(!name){ toast('Please enter a client name'); return; }
+  document.getElementById('ac-s1').style.display='none';
+  document.getElementById('ac-s2').style.display='block';
+  document.getElementById('ac-modal-sub').textContent='Step 2 of 2 — Rate card confirmation';
+  renderAcRateTable();
+}
+
+function acStep1(){
+  document.getElementById('ac-s1').style.display='block';
+  document.getElementById('ac-s2').style.display='none';
+  document.getElementById('ac-modal-sub').textContent='Step 1 of 2 — Client details';
+}
+
+function renderAcRateTable(){
+  acCustomRates={};
+  document.getElementById('ac-custom-rates-note').style.display='none';
+  const rows=Object.entries(RATE_CARD).map(([role,rate],i)=>`
+    <div style="display:grid;grid-template-columns:1fr 100px;padding:8px 12px;border-bottom:1px solid var(--border);align-items:center;background:${i%2===0?'var(--surface)':'var(--surface-inset)'}">
+      <div style="font-size:13px;color:var(--text)">${role}</div>
+      <div style="text-align:right">
+        <input type="number" value="${rate}" min="0" data-role="${role}" data-default="${rate}"
+          style="width:78px;padding:4px 8px;font-size:13px;border:1px solid var(--border3);border-radius:var(--r-xs);font-family:var(--font-body);text-align:right;background:var(--surface);color:var(--text)"
+          oninput="acRateChange('${role}',this.value,${rate},this)">
+      </div>
+    </div>`).join('');
+  document.getElementById('ac-rate-table').innerHTML=rows;
+}
+
+function acRateChange(role, val, defaultRate, el){
+  const v=parseFloat(val)||0;
+  if(v!==defaultRate){
+    acCustomRates[role]=v;
+    el.style.borderColor='var(--amber)';
+    el.style.background='var(--amber-bg)';
+  } else {
+    delete acCustomRates[role];
+    el.style.borderColor='var(--border3)';
+    el.style.background='var(--surface)';
+  }
+  document.getElementById('ac-custom-rates-note').style.display=Object.keys(acCustomRates).length>0?'block':'none';
+}
+
+function confirmAddClient(){
+  const name=document.getElementById('ac-name').value.trim();
+  const color=document.getElementById('ac-color-pick').value;
+  const desc=document.getElementById('ac-desc').value.trim();
+  if(!name){toast('Client name required');return;}
+  const id='custom_'+Date.now();
+  const hasCustomRates=Object.keys(acCustomRates).length>0;
+  const rateCard=hasCustomRates?{...RATE_CARD,...acCustomRates}:null;
+  const client={id,name,color,description:desc,isCustom:true,hasCustomRates,rateCard};
+  state.customClients=state.customClients||[];
+  state.customClients.push(client);
+  saveState();
+  renderCustomClientsSidebar();
+  closeAddClientModal();
+  toast(name+' added ✓');
+  navClient(id, document.getElementById('nav-'+id));
+}
+
+function renderCustomClientsSidebar(){
+  const el=document.getElementById('sb-custom-clients');
+  if(!el)return;
+  el.innerHTML=(state.customClients||[]).map(c=>`
+    <div class="sb-item" id="nav-${c.id}" onclick="navClient('${c.id}',this)" style="position:relative;padding-right:28px">
+      <div class="sb-client-dot" style="background:${c.color}"></div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
+      ${c.hasCustomRates?`<span style="font-size:9px;font-weight:700;color:var(--amber);background:var(--amber-bg);padding:1px 5px;border-radius:3px;flex-shrink:0">custom</span>`:''}
+      <button onclick="event.stopPropagation();deleteClient('${c.id}')" title="Delete client"
+        style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;border:none;background:transparent;color:var(--text4);font-size:11px;cursor:pointer;display:none;align-items:center;justify-content:center;font-family:var(--font-body)"
+        class="del-client-btn">✕</button>
+    </div>`).join('');
+  // Show delete on hover
+  el.querySelectorAll('.sb-item').forEach(item=>{
+    const btn=item.querySelector('.del-client-btn');
+    if(btn){
+      item.addEventListener('mouseenter',()=>{ btn.style.display='flex'; });
+      item.addEventListener('mouseleave',()=>{ btn.style.display='none'; });
+    }
+  });
+}
+
+function deleteClient(id){
+  const c=(state.customClients||[]).find(x=>x.id===id);
+  if(!c)return;
+  if(!confirm(`Delete "${c.name}"? This cannot be undone. Their quotes will remain but be reassigned to Unknown.`))return;
+  state.customClients=state.customClients.filter(x=>x.id!==id);
+  state.quotes.forEach(q=>{ if(q.clientId===id){ q.clientId=null; q.client=c.name+' (deleted)'; } });
+  saveState();
+  renderCustomClientsSidebar();
+  navTo('dashboard',document.getElementById('nav-dashboard'));
+  toast(c.name+' removed');
+}
+
+function getClientRateCard(clientId){
+  const allC=getAllClients();
+  const c=allC[clientId];
+  if(c&&c.rateCard) return c.rateCard;
+  return RATE_CARD;
+}
+
+
+
+
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -459,29 +584,40 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         All Quotes
       </div>
       <div class="sb-section">Clients</div>
-      <div class="sb-item" id="nav-ca" onclick="navClient('ca',this)">
-        <div class="sb-client-dot" style="background:#00A651"></div>
-        Cricket Australia
+      <div id="sb-clients">
+        <div class="sb-item" id="nav-ca" onclick="navClient('ca',this)">
+          <div class="sb-client-dot" style="background:#00A651"></div>
+          Cricket Australia
+        </div>
+        <div class="sb-item" id="nav-legalsuper" onclick="navClient('legalsuper',this)">
+          <div class="sb-client-dot" style="background:#1A4E8C"></div>
+          legalsuper
+        </div>
+        <div class="sb-item" id="nav-bega" onclick="navClient('bega',this)">
+          <div class="sb-client-dot" style="background:#E87722"></div>
+          BEGA
+        </div>
+        <div class="sb-item" id="nav-centacare" onclick="navClient('centacare',this)">
+          <div class="sb-client-dot" style="background:#C8102E"></div>
+          Centacare
+        </div>
+        <div class="sb-item" id="nav-goolwa" onclick="navClient('goolwa',this)">
+          <div class="sb-client-dot" style="background:#3D7F4A"></div>
+          Goolwa Pipi Co.
+        </div>
+        <div id="sb-custom-clients"></div>
       </div>
-      <div class="sb-item" id="nav-legalsuper" onclick="navClient('legalsuper',this)">
-        <div class="sb-client-dot" style="background:#1A4E8C"></div>
-        legalsuper
-      </div>
-      <div class="sb-item" id="nav-bega" onclick="navClient('bega',this)">
-        <div class="sb-client-dot" style="background:#E87722"></div>
-        BEGA
-      </div>
-      <div class="sb-item" id="nav-centacare" onclick="navClient('centacare',this)">
-        <div class="sb-client-dot" style="background:#C8102E"></div>
-        Centacare
-      </div>
-      <div class="sb-item" id="nav-goolwa" onclick="navClient('goolwa',this)">
-        <div class="sb-client-dot" style="background:#3D7F4A"></div>
-        Goolwa Pipi Co.
-      </div>
+      <button onclick="openAddClientModal()" style="display:flex;align-items:center;gap:7px;width:100%;margin-top:4px;padding:7px 9px;border-radius:var(--r-sm);font-size:12px;font-weight:500;color:var(--accent);background:transparent;border:1px dashed var(--accent-border);cursor:pointer;font-family:var(--font-body);transition:all 0.12s" onmouseover="this.style.background='var(--accent-muted)'" onmouseout="this.style.background='transparent'">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Add client
+      </button>
     </div>
     <div class="sb-footer">
       <div style="font-size:11px;color:var(--text4);padding:6px 9px 4px">Eavesdrop Finance · Internal</div>
+      <button onclick="startTour()" style="width:100%;padding:7px 9px;border-radius:var(--r-sm);font-size:12px;font-weight:500;color:var(--text3);background:transparent;border:none;cursor:pointer;font-family:var(--font-body);text-align:left;display:flex;align-items:center;gap:7px;transition:all 0.12s;margin-bottom:2px" onmouseover="this.style.background='var(--surface2)';this.style.color='var(--text)'" onmouseout="this.style.background='transparent';this.style.color='var(--text3)'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/><path d="M7 6.5v3M7 4.5h.01"/></svg>
+        How to use
+      </button>
       <button onclick="logOut()" style="width:100%;padding:7px 9px;border-radius:var(--r-sm);font-size:12px;font-weight:500;color:var(--text3);background:transparent;border:none;cursor:pointer;font-family:var(--font-body);text-align:left;display:flex;align-items:center;gap:7px;transition:all 0.12s" onmouseover="this.style.background='var(--red-bg)';this.style.color='var(--red)'" onmouseout="this.style.background='transparent';this.style.color='var(--text3)'">
         <svg width="12" height="12" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 1.5H2.5a1 1 0 00-1 1v8a1 1 0 001 1H5M9 9.5l2.5-3L9 3.5M4 6.5h7.5"/></svg>
         Lock workspace
@@ -498,7 +634,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <span id="bc-child"></span>
       </div>
       <div class="topbar-right">
-        <button class="btn btn-primary" onclick="openNewQuoteModal(null)">
+        <button class="btn btn-primary" id="btn-new-quote" onclick="openNewQuoteModal(null)">
           <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M7 2v10M2 7h10"/></svg>
           New Quote
         </button>
@@ -679,7 +815,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <div class="flow-footer">
             <button class="btn btn-ghost" onclick="goQuoteStep(1)">← Back</button>
             <div style="display:flex;gap:10px">
-              <button class="btn btn-secondary" onclick="exportQuoteCSV()">Export CSV</button>
+              <button class="btn btn-secondary" id="tour-export-btn" onclick="exportQuoteCSV()">Export CSV</button>
               <button class="btn btn-primary" onclick="goQuoteStep(3)">Review →</button>
             </div>
           </div>
@@ -944,13 +1080,18 @@ const PASSWORD = 'eavesdrop2026';
 const QI_API_KEY = 'sk-ant-api03-placeholder'; // replace with actual key or use settings
 
 // Client config
-const CLIENTS = {
-  ca:         { name:'Cricket Australia', color:'#00A651', mode:'ca' },
-  legalsuper: { name:'legalsuper',        color:'#1A4E8C', mode:'rate' },
-  bega:       { name:'BEGA',              color:'#E87722', mode:'rate' },
-  centacare:  { name:'Centacare',         color:'#C8102E', mode:'rate' },
-  goolwa:     { name:'Goolwa Pipi Co.',   color:'#3D7F4A', mode:'rate' }
+const BUILTIN_CLIENTS = {
+  ca:         { name:'Cricket Australia', color:'#00A651', isCA:true },
+  legalsuper: { name:'legalsuper',        color:'#1A4E8C' },
+  bega:       { name:'BEGA',              color:'#E87722' },
+  centacare:  { name:'Centacare',         color:'#C8102E' },
+  goolwa:     { name:'Goolwa Pipi Co.',   color:'#3D7F4A' }
 };
+function getAllClients(){
+  const custom={};
+  (state.customClients||[]).forEach(c=>{ custom[c.id]=c; });
+  return {...BUILTIN_CLIENTS,...custom};
+}
 
 // Eavesdrop rate card (role → rate)
 const RATE_CARD = {
@@ -966,7 +1107,7 @@ const RATE_CARD = {
 };
 
 // ── STATE ──────────────────────────────────────────────────────────────
-let state = { quotes:[], currentQuote:null };
+let state = { quotes:[], currentQuote:null, customClients:[] };
 let currentClient = null;
 let clientStatusFilter = '';
 let quotesFilter = '';
@@ -1080,6 +1221,8 @@ function logOut(){ sessionStorage.removeItem('qi_auth'); location.reload(); }
 function showApp(){
   document.getElementById('app').style.display='flex';
   refreshDash();
+  renderCustomClientsSidebar();
+  maybeStartTour();
 }
 
 // ── NAV ────────────────────────────────────────────────────────────────
@@ -1088,7 +1231,7 @@ function navTo(screen, el){
   document.getElementById('screen-'+screen).classList.add('active');
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   if(el) el.classList.add('active');
-  const labels={dashboard:'Overview',quotes:'All Quotes',client:CLIENTS[currentClient]?.name||'Client',quote:'Quote',ca:'CA Calculator'};
+  const labels={dashboard:'Overview',quotes:'All Quotes',client:getAllClients()[currentClient]?.name||'Client',quote:'Quote',ca:'CA Calculator'};
   document.getElementById('bc-parent').textContent=labels[screen]||screen;
   document.getElementById('bc-sep').style.display='none';
   document.getElementById('bc-child').textContent='';
@@ -1097,7 +1240,7 @@ function navTo(screen, el){
   if(screen==='ca'){ document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active')); document.getElementById('nav-ca')?.classList.add('active'); }
 }
 
-function navClient(clientId, el){
+function navClient(clientId, el){ const CLIENTS=getAllClients();
   currentClient=clientId;
   clientStatusFilter='';
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
@@ -1105,7 +1248,7 @@ function navClient(clientId, el){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-client').classList.add('active');
 
-  const c=CLIENTS[clientId];
+  const c=getAllClients()[clientId]||{};
   document.getElementById('client-dot').style.background=c.color;
   document.getElementById('client-page-title').textContent=c.name;
   document.getElementById('bc-parent').textContent=c.name;
@@ -1158,14 +1301,14 @@ function refreshDash(){
   qs.forEach(q=>{ const c=q.client||'Unknown'; if(!clientMap[c])clientMap[c]=0; clientMap[c]+=(q.total||0); });
   const sorted=Object.entries(clientMap).sort((a,b)=>b[1]-a[1]);
   document.getElementById('dash-clients').innerHTML=sorted.length?sorted.map(([name,val])=>{
-    const cid=Object.keys(CLIENTS).find(k=>CLIENTS[k].name===name)||'';
-    const col=CLIENTS[cid]?.color||'var(--text3)';
+    const cid=Object.keys(getAllClients()).find(k=>getAllClients()[k].name===name)||'';
+    const col=getAllClients()[cid]?.color||'var(--text3)';
     return`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="${cid?`navClient('${cid}',document.getElementById('nav-${cid}'))`:''}"><div style="width:8px;height:8px;border-radius:2px;background:${col};flex-shrink:0"></div><div style="flex:1;font-size:13px;font-weight:500;color:var(--text)">${name}</div><div style="font-size:12px;color:var(--text3);font-variant-numeric:tabular-nums">${fmtInt(val)}</div></div>`;
   }).join(''):'<div style="color:var(--text3);font-size:12.5px">No data yet.</div>';
 }
 
 function renderClientDash(clientId){
-  const c=CLIENTS[clientId];
+  const c=getAllClients()[clientId]||{};
   const qs=state.quotes.filter(q=>q.client===c.name);
   const filtered=clientStatusFilter?qs.filter(q=>q.status===clientStatusFilter):qs;
 
@@ -1232,7 +1375,7 @@ function openNewQuoteModal(clientId){
   nqGoStep(1);
   nqSwitchTab('upload');
 
-  const c=clientId?CLIENTS[clientId]:null;
+  const c=clientId?getAllClients()[clientId]:null;
 
   // Store client context
   const mt=document.getElementById('nq-modal-title');if(mt){mt.dataset.cid=clientId||'';mt.textContent=c?`New Quote — ${c.name}`:'New Quote';}
@@ -1398,8 +1541,8 @@ function nqCreate(){
   const title=document.getElementById('nq-title-input').value.trim();
   const notes=document.getElementById('nq-notes').value.trim();
   const clientId=document.getElementById('nq-modal-title').dataset.cid||null;
-  const clientName=clientId?CLIENTS[clientId].name:(currentClient?CLIENTS[currentClient].name:'Unknown');
-  const isCA=clientId?(CLIENTS[clientId]?.isCA||false):false;
+  const clientName=clientId?getAllClients()[clientId]?.name:(currentClient?getAllClients()[currentClient]?.name||'Unknown':'Unknown');
+  const isCA=clientId?(getAllClients()[clientId]?.isCA||false):false;
   const assets=nqAssets.map(a=>({...a,roles:a.roles.map(r=>({...r}))}));
   const sLines=isCA?[]:buildSummaryLines(assets);
   const sub=assets.reduce((s,a)=>s+a.roles.reduce((t,r)=>t+(r.qty||1)*(r.hours||0)*(r.rate||0),0),0)+sLines.reduce((s,l)=>s+calcSummaryLineTotal(l),0);
@@ -1834,6 +1977,373 @@ document.addEventListener('DOMContentLoaded',()=>{
     dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)nqHandleFile(f);});
   }
 });
+
+// ── ADD CLIENT ────────────────────────────────────────────────────────
+let acCustomRates = {};
+
+function openAddClientModal(){
+  acCustomRates={};
+  document.getElementById('ac-name').value='';
+  document.getElementById('ac-color-pick').value='#2748D6';
+  document.getElementById('ac-desc').value='';
+  document.getElementById('ac-s1').style.display='block';
+  document.getElementById('ac-s2').style.display='none';
+  document.getElementById('ac-modal-sub').textContent='Step 1 of 2 — Client details';
+  document.getElementById('add-client-modal').classList.add('open');
+}
+
+function closeAddClientModal(){
+  document.getElementById('add-client-modal').classList.remove('open');
+}
+
+function acStep2(){
+  const name=document.getElementById('ac-name').value.trim();
+  if(!name){ toast('Please enter a client name'); return; }
+  document.getElementById('ac-s1').style.display='none';
+  document.getElementById('ac-s2').style.display='block';
+  document.getElementById('ac-modal-sub').textContent='Step 2 of 2 — Rate card confirmation';
+  renderAcRateTable();
+}
+
+function acStep1(){
+  document.getElementById('ac-s1').style.display='block';
+  document.getElementById('ac-s2').style.display='none';
+  document.getElementById('ac-modal-sub').textContent='Step 1 of 2 — Client details';
+}
+
+function renderAcRateTable(){
+  acCustomRates={};
+  document.getElementById('ac-custom-rates-note').style.display='none';
+  const rows=Object.entries(RATE_CARD).map(([role,rate],i)=>`
+    <div style="display:grid;grid-template-columns:1fr 100px;padding:8px 12px;border-bottom:1px solid var(--border);align-items:center;background:${i%2===0?'var(--surface)':'var(--surface-inset)'}">
+      <div style="font-size:13px;color:var(--text)">${role}</div>
+      <div style="text-align:right">
+        <input type="number" value="${rate}" min="0" data-role="${role}" data-default="${rate}"
+          style="width:78px;padding:4px 8px;font-size:13px;border:1px solid var(--border3);border-radius:var(--r-xs);font-family:var(--font-body);text-align:right;background:var(--surface);color:var(--text)"
+          oninput="acRateChange('${role}',this.value,${rate},this)">
+      </div>
+    </div>`).join('');
+  document.getElementById('ac-rate-table').innerHTML=rows;
+}
+
+function acRateChange(role, val, defaultRate, el){
+  const v=parseFloat(val)||0;
+  if(v!==defaultRate){
+    acCustomRates[role]=v;
+    el.style.borderColor='var(--amber)';
+    el.style.background='var(--amber-bg)';
+  } else {
+    delete acCustomRates[role];
+    el.style.borderColor='var(--border3)';
+    el.style.background='var(--surface)';
+  }
+  document.getElementById('ac-custom-rates-note').style.display=Object.keys(acCustomRates).length>0?'block':'none';
+}
+
+function confirmAddClient(){
+  const name=document.getElementById('ac-name').value.trim();
+  const color=document.getElementById('ac-color-pick').value;
+  const desc=document.getElementById('ac-desc').value.trim();
+  if(!name){toast('Client name required');return;}
+  const id='custom_'+Date.now();
+  const hasCustomRates=Object.keys(acCustomRates).length>0;
+  const rateCard=hasCustomRates?{...RATE_CARD,...acCustomRates}:null;
+  const client={id,name,color,description:desc,isCustom:true,hasCustomRates,rateCard};
+  state.customClients=state.customClients||[];
+  state.customClients.push(client);
+  saveState();
+  renderCustomClientsSidebar();
+  closeAddClientModal();
+  toast(name+' added ✓');
+  navClient(id, document.getElementById('nav-'+id));
+}
+
+function renderCustomClientsSidebar(){
+  const el=document.getElementById('sb-custom-clients');
+  if(!el)return;
+  el.innerHTML=(state.customClients||[]).map(c=>`
+    <div class="sb-item" id="nav-${c.id}" onclick="navClient('${c.id}',this)" style="position:relative;padding-right:28px">
+      <div class="sb-client-dot" style="background:${c.color}"></div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
+      ${c.hasCustomRates?`<span style="font-size:9px;font-weight:700;color:var(--amber);background:var(--amber-bg);padding:1px 5px;border-radius:3px;flex-shrink:0">custom</span>`:''}
+      <button onclick="event.stopPropagation();deleteClient('${c.id}')" title="Delete client"
+        style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;border:none;background:transparent;color:var(--text4);font-size:11px;cursor:pointer;display:none;align-items:center;justify-content:center;font-family:var(--font-body)"
+        class="del-client-btn">✕</button>
+    </div>`).join('');
+  // Show delete on hover
+  el.querySelectorAll('.sb-item').forEach(item=>{
+    const btn=item.querySelector('.del-client-btn');
+    if(btn){
+      item.addEventListener('mouseenter',()=>{ btn.style.display='flex'; });
+      item.addEventListener('mouseleave',()=>{ btn.style.display='none'; });
+    }
+  });
+}
+
+function deleteClient(id){
+  const c=(state.customClients||[]).find(x=>x.id===id);
+  if(!c)return;
+  if(!confirm(`Delete "${c.name}"? This cannot be undone. Their quotes will remain but be reassigned to Unknown.`))return;
+  state.customClients=state.customClients.filter(x=>x.id!==id);
+  state.quotes.forEach(q=>{ if(q.clientId===id){ q.clientId=null; q.client=c.name+' (deleted)'; } });
+  saveState();
+  renderCustomClientsSidebar();
+  navTo('dashboard',document.getElementById('nav-dashboard'));
+  toast(c.name+' removed');
+}
+
+function getClientRateCard(clientId){
+  const allC=getAllClients();
+  const c=allC[clientId];
+  if(c&&c.rateCard) return c.rateCard;
+  return RATE_CARD;
+}
+
+
+// ── TOUR ──────────────────────────────────────────────────────────────
+let tourCurrentStep = 0;
+let tourDummyQuoteId = null;
+
+const TOUR_STEPS = [
+  { target:'#sb-clients',      nav:'dashboard', text:'Your clients live here. Pick one to see their quote history, or hit Overview for the full picture.' },
+  { target:'#btn-new-quote',   nav:'dashboard', text:'Start here. Paste your asset list — one asset per line. The tool reads each line and assigns roles and rates automatically.' },
+  { target:'#est-body',        nav:'quote',     text:'Every asset gets its default roles pre-assigned. Hours and rates are all editable — just click in.' },
+  { target:'#auto-tot-0',      nav:'quote',     text:'These two lines are automatic. Dispatch scales with asset count, ECD is fixed. You can override the hours if needed.' },
+  { target:'#q-status',        nav:'quote',     text:'Move quotes from Pipeline → Approved → Fulfilled as the job progresses.' },
+  { target:'#tour-export-btn', nav:'quote',     text:'Exports a full breakdown — asset by asset, role by role — ready to drop into a client estimate.' },
+  { target:'#nav-ca',          nav:'dashboard', text:'Cricket Australia works differently. Fixed CA rates, no auto lines. Use the calculator for all CA scoping.' },
+];
+
+function startTour(){
+  document.getElementById('tour-overlay').style.display='block';
+  document.getElementById('tour-intro').style.display='flex';
+  document.getElementById('tour-tip').style.display='none';
+  document.getElementById('tour-highlight').style.display='none';
+}
+
+function skipTour(){
+  document.getElementById('tour-overlay').style.display='none';
+  localStorage.setItem('qc_tour_seen','1');
+  cleanupTourQuote();
+}
+
+function cleanupTourQuote(){
+  if(tourDummyQuoteId){
+    state.quotes=state.quotes.filter(q=>q.id!==tourDummyQuoteId);
+    tourDummyQuoteId=null;
+    saveState();
+  }
+}
+
+function createTourQuote(){
+  // Build a dummy quote with 3 assets for the tour
+  const assets=[
+    buildAsset('Meta Static 1 (Feed/Story)'),
+    buildAsset('Partner eDM — Variation A'),
+    buildAsset('HTML Banner 300x250')
+  ];
+  const id='TOUR_'+Date.now();
+  tourDummyQuoteId=id;
+  const sLines=buildSummaryLines(assets);
+  const sub=assets.reduce((s,a)=>s+a.roles.reduce((t,r)=>t+(r.qty||1)*(r.hours||0)*(r.rate||0),0),0)+sLines.reduce((s,l)=>s+calcSummaryLineTotal(l),0);
+  const q={id,num:'EST-DEMO',date:today(),contact:'Demo',title:'Tour Demo Quote',notes:'',client:'legalsuper',clientId:'legalsuper',isCA:false,assets,status:'Pipeline',total:sub*1.1,_isTourQuote:true};
+  state.currentQuote=q;
+  // Don't save to state.quotes — keep it ephemeral
+  return q;
+}
+
+function beginTour(){
+  document.getElementById('tour-intro').style.display='none';
+  tourCurrentStep=0;
+  tourStep(0);
+}
+
+function tourNavTo(nav){
+  if(nav==='dashboard'){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-dashboard').classList.add('active');
+    document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+    document.getElementById('nav-dashboard')?.classList.add('active');
+    refreshDash();
+  } else if(nav==='quote'){
+    // Create dummy quote and open to step 2 (estimate)
+    if(!state.currentQuote||!state.currentQuote._isTourQuote) createTourQuote();
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-quote').classList.add('active');
+    document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+    // Set step buttons
+    for(let i=1;i<=3;i++){
+      const btn=document.getElementById('qs-btn-'+i);
+      if(btn){ btn.classList.toggle('active',i===2); btn.classList.toggle('done',i<2); }
+    }
+    document.getElementById('qs-1').style.display='none';
+    document.getElementById('qs-2').style.display='block';
+    document.getElementById('qs-3').style.display='none';
+    renderEstimate();
+  }
+}
+
+function tourStep(n){
+  const steps=TOUR_STEPS;
+  if(n<0)n=0;
+  if(n>=steps.length){ skipTour(); return; }
+  tourCurrentStep=n;
+  const step=steps[n];
+
+  // Navigate first
+  tourNavTo(step.nav);
+
+  // Wait for DOM to settle, then position tooltip
+  setTimeout(()=>{
+    const el=document.querySelector(step.target);
+    const tip=document.getElementById('tour-tip');
+    const highlight=document.getElementById('tour-highlight');
+
+    document.getElementById('tour-step-label').textContent='Step '+(n+1)+' of '+steps.length;
+    document.getElementById('tour-tip-text').textContent=step.text;
+    document.getElementById('tour-back-btn').style.opacity=n===0?'0':'1';
+    document.getElementById('tour-back-btn').style.pointerEvents=n===0?'none':'all';
+    document.getElementById('tour-next-btn').textContent=n===steps.length-1?'Done ✓':'Next →';
+    document.getElementById('tour-dots').innerHTML=steps.map((_,i)=>'<div style="width:6px;height:6px;border-radius:50%;background:'+(i===n?'var(--accent)':'var(--border3)')+'"></div>').join('');
+
+    tip.style.transform='';
+
+    if(el){
+      const r=el.getBoundingClientRect();
+      const pad=8;
+      highlight.style.display='block';
+      highlight.style.left=(r.left-pad)+'px';
+      highlight.style.top=(r.top+window.scrollY-pad)+'px';
+      highlight.style.width=(r.width+pad*2)+'px';
+      highlight.style.height=(r.height+pad*2)+'px';
+
+      tip.style.display='block';
+      const tipH=200; const tipW=300; const vp=window.innerHeight;
+      let top=r.bottom+14;
+      if(top+tipH>vp-20) top=r.top-tipH-14;
+      let left=r.left;
+      if(left+tipW>window.innerWidth-20) left=window.innerWidth-tipW-20;
+      if(left<12) left=12;
+      tip.style.top=Math.max(12,top+window.scrollY)+'px';
+      tip.style.left=left+'px';
+    } else {
+      highlight.style.display='none';
+      tip.style.display='block';
+      tip.style.top='50%';
+      tip.style.left='50%';
+      tip.style.transform='translate(-50%,-50%)';
+    }
+  }, 80);
+}
+
+function maybeStartTour(){
+  if(!localStorage.getItem('qc_tour_seen')){
+    setTimeout(startTour, 600);
+  }
+}
+
 </script>
+
+<!-- ADD CLIENT MODAL -->
+<div class="modal-overlay" id="add-client-modal" onclick="if(event.target===this)closeAddClientModal()">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="ac-modal-title">Add client</div>
+        <div style="font-size:12.5px;color:var(--text3);margin-top:3px" id="ac-modal-sub">Step 1 of 2 — Client details</div>
+      </div>
+      <button class="modal-close" onclick="closeAddClientModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Step 1 -->
+      <div id="ac-s1">
+        <div class="form-group">
+          <label>Client name</label>
+          <input type="text" id="ac-name" placeholder="e.g. Medibank">
+        </div>
+        <div class="form-group">
+          <label>Brand colour</label>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <input type="color" id="ac-color-pick" value="#2748D6" style="width:40px;height:36px;border:1px solid var(--border3);border-radius:var(--r-sm);cursor:pointer;padding:2px">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+
+              <div onclick="document.getElementById('ac-color-pick').value='#E63946'" style="width:24px;height:24px;border-radius:6px;background:#E63946;cursor:pointer;border:2px solid transparent;transition:border-color 0.1s" onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='transparent'"></div>
+              <div onclick="document.getElementById('ac-color-pick').value='#F4A261'" style="width:24px;height:24px;border-radius:6px;background:#F4A261;cursor:pointer;border:2px solid transparent;transition:border-color 0.1s" onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='transparent'"></div>
+              <div onclick="document.getElementById('ac-color-pick').value='#2A9D8F'" style="width:24px;height:24px;border-radius:6px;background:#2A9D8F;cursor:pointer;border:2px solid transparent;transition:border-color 0.1s" onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='transparent'"></div>
+              <div onclick="document.getElementById('ac-color-pick').value='#457B9D'" style="width:24px;height:24px;border-radius:6px;background:#457B9D;cursor:pointer;border:2px solid transparent;transition:border-color 0.1s" onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='transparent'"></div>
+              <div onclick="document.getElementById('ac-color-pick').value='#6A4C93'" style="width:24px;height:24px;border-radius:6px;background:#6A4C93;cursor:pointer;border:2px solid transparent;transition:border-color 0.1s" onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='transparent'"></div>
+              <div onclick="document.getElementById('ac-color-pick').value='#264653'" style="width:24px;height:24px;border-radius:6px;background:#264653;cursor:pointer;border:2px solid transparent;transition:border-color 0.1s" onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='transparent'"></div>
+              <div onclick="document.getElementById('ac-color-pick').value='#E9C46A'" style="width:24px;height:24px;border-radius:6px;background:#E9C46A;cursor:pointer;border:2px solid transparent;transition:border-color 0.1s" onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='transparent'"></div>
+              <div onclick="document.getElementById('ac-color-pick').value='#2748D6'" style="width:24px;height:24px;border-radius:6px;background:#2748D6;cursor:pointer;border:2px solid transparent;transition:border-color 0.1s" onmouseover="this.style.borderColor='var(--text)'" onmouseout="this.style.borderColor='transparent'"></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Short description <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
+          <textarea id="ac-desc" rows="2" placeholder="e.g. Superannuation client, social and digital focus"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:20px">
+          <button class="btn btn-primary" onclick="acStep2()">Continue: Rate card →</button>
+        </div>
+      </div>
+      <!-- Step 2 -->
+      <div id="ac-s2" style="display:none">
+        <div style="padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.6">
+          This client will use Eavesdrop's standard rate card by default. If changes are required, edit any rates below before confirming.
+        </div>
+        <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;max-height:340px;overflow-y:auto">
+          <div style="display:grid;grid-template-columns:1fr 100px;background:var(--surface2);border-bottom:1.5px solid var(--border2);padding:8px 12px">
+            <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Role</div>
+            <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;text-align:right">Rate/hr (ex-GST)</div>
+          </div>
+          <div id="ac-rate-table"></div>
+        </div>
+        <div id="ac-custom-rates-note" style="display:none;margin-top:10px;padding:9px 12px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--r-sm);font-size:12px;color:var(--amber)">
+          ⚠ Custom rates applied — these will differ from the standard Eavesdrop rate card.
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:20px">
+          <button class="btn btn-ghost" onclick="acStep1()">← Back</button>
+          <button class="btn btn-success" onclick="confirmAddClient()">Confirm & add client ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOUR OVERLAY -->
+<div id="tour-overlay" style="display:none;position:fixed;inset:0;z-index:500">
+  <!-- dim backdrop -->
+  <div id="tour-backdrop" style="position:absolute;inset:0;background:rgba(22,21,13,0.55)"></div>
+  <!-- intro slide -->
+  <div id="tour-intro" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px">
+    <div style="background:var(--surface);border-radius:var(--r-2xl);box-shadow:var(--shadow-lg);max-width:440px;width:100%;padding:40px;text-align:center;animation:fadeUp 0.25s ease">
+      <div style="width:52px;height:52px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+        <svg width="24" height="24" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M4 6h8M4 14h6" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div style="font-family:var(--font-display);font-size:22px;font-weight:600;color:var(--text);letter-spacing:-0.4px;margin-bottom:6px">Quotecraft</div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text4);margin-bottom:20px">Eavesdrop Internal</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:28px">A quick tour before you dive in. This tool handles quoting, estimates and CA fee calculations for all Eavesdrop clients.</div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="skipTour()" style="padding:9px 20px;border-radius:var(--r-sm);border:1px solid var(--border3);background:var(--surface);font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;font-family:var(--font-body)">Skip</button>
+        <button onclick="beginTour()" style="padding:9px 22px;border-radius:var(--r-sm);border:none;background:var(--accent);font-size:13px;font-weight:600;color:#fff;cursor:pointer;font-family:var(--font-body)">Start tour →</button>
+      </div>
+    </div>
+  </div>
+  <!-- tooltip -->
+  <div id="tour-tip" style="display:none;position:absolute;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);width:300px;padding:18px 20px;border:1px solid var(--border2);animation:fadeUp 0.2s ease">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--accent)" id="tour-step-label">Step 1 of 7</div>
+      <button onclick="skipTour()" style="background:none;border:none;font-size:13px;color:var(--text4);cursor:pointer;padding:0;font-family:var(--font-body)">✕</button>
+    </div>
+    <div style="font-size:13.5px;color:var(--text);line-height:1.65;margin-bottom:16px" id="tour-tip-text"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <button id="tour-back-btn" onclick="tourStep(tourCurrentStep-1)" style="padding:6px 14px;border-radius:var(--r-sm);border:1px solid var(--border3);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--text3);cursor:pointer;font-family:var(--font-body)">← Back</button>
+      <div style="display:flex;gap:4px" id="tour-dots"></div>
+      <button id="tour-next-btn" onclick="tourStep(tourCurrentStep+1)" style="padding:6px 16px;border-radius:var(--r-sm);border:none;background:var(--accent);font-size:12.5px;font-weight:600;color:#fff;cursor:pointer;font-family:var(--font-body)">Next →</button>
+    </div>
+  </div>
+  <!-- highlight ring -->
+  <div id="tour-highlight" style="position:absolute;border-radius:10px;box-shadow:0 0 0 3px var(--accent),0 0 0 6px rgba(39,72,214,0.2);pointer-events:none;transition:all 0.3s cubic-bezier(0.4,0,0.2,1)"></div>
+</div>
 </body>
 </html>
