@@ -797,7 +797,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
                 </div>
                 <div style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">
                   <!-- Header row -->
-                  <div style="display:grid;grid-template-columns:200px 1fr;background:var(--surface2);border-bottom:1.5px solid var(--border2)">
+                  <div style="display:grid;grid-template-columns:280px 1fr;background:var(--surface2);border-bottom:1.5px solid var(--border2)">
                     <div style="padding:8px 12px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;border-right:1px solid var(--border)">Asset</div>
                     <div style="display:grid;grid-template-columns:1fr 52px 60px 72px 88px 28px;gap:4px;padding:8px 10px">
                       <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Role</div>
@@ -1520,8 +1520,8 @@ function renderAssetBlock(a, ai, prefix){
   }).join('');
 
   return`<div style="display:flex;border-bottom:1.5px solid var(--border2)" id="${prefix}-ag-${ai}">
-    <div style="width:200px;flex-shrink:0;border-right:1px solid var(--border);padding:10px 12px;display:flex;flex-direction:column;gap:4px;background:var(--surface-inset)">
-      <input type="text" value="${(a.name||'').replace(/"/g,'&quot;')}" onchange="${prefix}Name(${ai},this.value)" style="padding:5px 7px;font-size:12.5px;font-weight:500;border:1px solid var(--border3);border-radius:var(--r-xs);font-family:var(--font-body);background:var(--surface);color:var(--text);width:100%">
+    <div style="width:280px;flex-shrink:0;border-right:1px solid var(--border);padding:10px 12px;display:flex;flex-direction:column;gap:4px;background:var(--surface-inset)">
+      <textarea onchange="${prefix}Name(${ai},this.value)" rows="2" style="padding:5px 7px;font-size:12.5px;font-weight:500;border:1px solid var(--border3);border-radius:var(--r-xs);font-family:var(--font-body);background:var(--surface);color:var(--text);width:100%;resize:none;line-height:1.4">${(a.name||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
       <div style="font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums" id="${prefix}-at-${ai}">Asset total: ${fmt(assetTotal)}</div>
       <button onclick="${prefix}AddRole(${ai})" style="font-size:11.5px;color:var(--accent);background:none;border:none;cursor:pointer;text-align:left;padding:0;font-family:var(--font-body);font-weight:500">+ Add role</button>
     </div>
@@ -1648,7 +1648,7 @@ function renderEstimate(){
     if(q._autoOverride){Object.keys(q._autoOverride).forEach(li=>{sLines[li].hours=q._autoOverride[li];});}
     html+='<div id="auto-summary-block" style="border-top:2px solid var(--border2)">';
     html+=sLines.map((l,li)=>`<div style="display:flex;border-bottom:1px solid var(--border);background:${li===0?'var(--amber-bg)':'#F5F3FF'}">
-      <div style="width:200px;flex-shrink:0;border-right:1px solid var(--border);padding:10px;display:flex;flex-direction:column;gap:2px;background:${li===0?'var(--amber-bg)':'#F5F3FF'}">
+      <div style="width:280px;flex-shrink:0;border-right:1px solid var(--border);padding:10px;display:flex;flex-direction:column;gap:2px;background:${li===0?'var(--amber-bg)':'#F5F3FF'}">
         <div style="font-size:13px;font-weight:500;color:var(--text)">${l.name}</div>
         <div style="font-size:10.5px;color:var(--text4)">${l.label}</div>
       </div>
