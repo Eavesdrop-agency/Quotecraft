@@ -1916,7 +1916,7 @@ function caExportCSV(){
     ['T1 Photoshoots', t1pLabel, t1pRefresh?'Yes':'No', '—', '—', document.getElementById('ca-t1p-total').textContent.replace(/[$,]/g,'')],
     ['T2 Digital & Content', t2Label, t2Refresh?'Yes':'No', t2NewV||'—', t2RefV||'—', document.getElementById('ca-t2-total').textContent.replace(/[$,]/g,'')],
     ['T3 Print & OOH', t3Label, t3Refresh?'Yes':'No', t3NewV||'—', t3RefV||'—', document.getElementById('ca-t3-total').textContent.replace(/[$,]/g,'')],
-    ['','','','','TOTAL (ex-GST)', document.getElementById('ca-grand').textContent.replace(/[$,]/g,'')]
+    ['','','','','TOTAL (ex-GST)', document.getElementById('ca-grand-total').textContent.replace(/[$,]/g,'')]
   );
   const notes=document.getElementById('ca-notes').value.trim();
   if(notes) rows.push([''],['Notes','',notes]);
