@@ -1818,6 +1818,42 @@ function exportQuoteCSV(){
 
   if(q.notes) rows.push([''],['Notes',q.notes]);
 
+  // ── Role summary (not CA) ──────────────────────────────────────────
+  if(!q.isCA){
+    const roleTotals={};
+    assets.forEach(a=>{
+      a.roles.forEach(r=>{
+        if(!roleTotals[r.role]) roleTotals[r.role]={hours:0,rate:r.rate};
+        roleTotals[r.role].hours+=((r.qty||1)*(r.hours||0));
+        roleTotals[r.role].rate=r.rate; // use last seen rate
+      });
+    });
+    // Include auto summary lines in role totals
+    const sLinesSum=buildSummaryLines(assets);
+    if(q._autoOverride){Object.keys(q._autoOverride).forEach(li=>{sLinesSum[li].hours=q._autoOverride[li];});}
+    sLinesSum.forEach(l=>{
+      if(!roleTotals[l.role]) roleTotals[l.role]={hours:0,rate:l.rate};
+      roleTotals[l.role].hours+=((l.qty||1)*(l.hours||0));
+      roleTotals[l.role].rate=l.rate;
+    });
+
+    rows.push([''],[''],['ROLE SUMMARY'],
+      ['Role','Total Hours','Rate (ex-GST)','Total Fees (ex-GST)']
+    );
+    let roleSubTotal=0;
+    Object.entries(roleTotals).forEach(([role,{hours,rate}])=>{
+      const total=hours*rate;
+      roleSubTotal+=total;
+      rows.push([role, hours.toFixed(1), rate, total.toFixed(2)]);
+    });
+    const roleGst=roleSubTotal*0.1;
+    rows.push(
+      ['TOTAL', Object.values(roleTotals).reduce((s,{hours})=>s+hours,0).toFixed(1), '', roleSubTotal.toFixed(2)],
+      ['GST (10%)', '', '', roleGst.toFixed(2)],
+      ['TOTAL INCL GST', '', '', (roleSubTotal+roleGst).toFixed(2)]
+    );
+  }
+
   const csv=rows.map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
   const uri='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
   const a=document.createElement('a');a.href=uri;a.download=qcFileName(q.client,'csv');
