@@ -149,43 +149,6 @@ function getClientRateCard(clientId){
   return RATE_CARD;
 }
 
-
-
-
-
-// ── ARCHIVE QUOTE ─────────────────────────────────────────────────────
-function archiveQuote(){
-  if(!state.currentQuote) return;
-  if(!confirm('Archive this quote? It will be hidden from your pipeline but can be restored from All Quotes.')) return;
-  const q=state.currentQuote;
-  const idx=state.quotes.findIndex(x=>x.id===q.id);
-  if(idx>=0){
-    state.quotes[idx].archived=true;
-    saveState();
-    toast('Quote archived');
-    refreshDash();
-    if(q.clientId) navClient(q.clientId, document.getElementById('nav-'+q.clientId));
-    else navTo('quotes', document.getElementById('nav-quotes'));
-  } else {
-    // Quote not saved yet — just go back
-    navBack();
-  }
-}
-
-function restoreQuote(id){
-  const idx=state.quotes.findIndex(x=>x.id===id);
-  if(idx>=0){ state.quotes[idx].archived=false; saveState(); renderAllQuotes(); toast('Quote restored'); }
-}
-
-
-let showArchived = false;
-function toggleShowArchived(){
-  showArchived=!showArchived;
-  const btn=document.getElementById('show-archived-btn');
-  if(btn){ btn.textContent=showArchived?'Hide archived':'Show archived'; btn.style.color=showArchived?'var(--accent)':'var(--text3)'; btn.style.borderColor=showArchived?'var(--accent-border)':'var(--border3)'; btn.style.background=showArchived?'var(--accent-muted)':'var(--surface)'; }
-  renderAllQuotes();
-}
-
 </script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1417,13 +1380,16 @@ function quoteRowHTML(q){
       <button onclick="event.stopPropagation();restoreQuote('${q.id}')" style="font-size:11px;color:var(--accent);background:var(--accent-muted);border:1px solid var(--accent-border);border-radius:var(--r-xs);padding:2px 8px;cursor:pointer;font-family:var(--font-body);white-space:nowrap">Restore</button>
     </div>
   </div>`;
-  return`<div class="quote-row" onclick="openQuote('${q.id}')">
+  return`<div class="quote-row" onclick="openQuote('${q.id}')" style="position:relative" onmouseenter="this.querySelector('.archive-btn').style.opacity='1'" onmouseleave="this.querySelector('.archive-btn').style.opacity='0'">
     <div class="q-num">${q.num}</div>
     <div class="q-client">${q.client}</div>
     <div class="q-title">${q.title||'—'}</div>
     <span class="badge ${badges[q.status]||'badge-grey'}">${q.status||'Pipeline'}</span>
     <div class="q-amount">${fmt(q.total||0)}</div>
-    <div class="q-date">${q.date||''}</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="q-date">${q.date||''}</div>
+      <button class="archive-btn" onclick="event.stopPropagation();archiveQuoteById('${q.id}')" style="font-size:11px;color:var(--text3);background:var(--surface2);border:1px solid var(--border3);border-radius:var(--r-xs);padding:2px 8px;cursor:pointer;font-family:var(--font-body);white-space:nowrap;opacity:0;transition:opacity 0.15s">Archive</button>
+    </div>
   </div>`;
 }
 
