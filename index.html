@@ -152,6 +152,40 @@ function getClientRateCard(clientId){
 
 
 
+
+// ── ARCHIVE QUOTE ─────────────────────────────────────────────────────
+function archiveQuote(){
+  if(!state.currentQuote) return;
+  if(!confirm('Archive this quote? It will be hidden from your pipeline but can be restored from All Quotes.')) return;
+  const q=state.currentQuote;
+  const idx=state.quotes.findIndex(x=>x.id===q.id);
+  if(idx>=0){
+    state.quotes[idx].archived=true;
+    saveState();
+    toast('Quote archived');
+    refreshDash();
+    if(q.clientId) navClient(q.clientId, document.getElementById('nav-'+q.clientId));
+    else navTo('quotes', document.getElementById('nav-quotes'));
+  } else {
+    // Quote not saved yet — just go back
+    navBack();
+  }
+}
+
+function restoreQuote(id){
+  const idx=state.quotes.findIndex(x=>x.id===id);
+  if(idx>=0){ state.quotes[idx].archived=false; saveState(); renderAllQuotes(); toast('Quote restored'); }
+}
+
+
+let showArchived = false;
+function toggleShowArchived(){
+  showArchived=!showArchived;
+  const btn=document.getElementById('show-archived-btn');
+  if(btn){ btn.textContent=showArchived?'Hide archived':'Show archived'; btn.style.color=showArchived?'var(--accent)':'var(--text3)'; btn.style.borderColor=showArchived?'var(--accent-border)':'var(--border3)'; btn.style.background=showArchived?'var(--accent-muted)':'var(--surface)'; }
+  renderAllQuotes();
+}
+
 </script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -779,7 +813,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
             <div class="form-group" style="margin-bottom:0"><label>Scope notes</label><textarea id="q-notes" rows="2"></textarea></div>
           </div>
           <div class="flow-footer">
-            <button class="btn btn-ghost" onclick="navBack()">← Back</button>
+            <div style="display:flex;align-items:center;gap:10px">
+              <button class="btn btn-ghost" onclick="navBack()">← Back</button>
+              <button onclick="archiveQuote()" style="font-size:12px;color:var(--red);background:none;border:none;cursor:pointer;font-family:var(--font-body);padding:4px 8px;border-radius:var(--r-xs);transition:background 0.1s" onmouseover="this.style.background='var(--red-bg)'" onmouseout="this.style.background='none'">Archive quote</button>
+            </div>
             <button class="btn btn-primary" onclick="goQuoteStep(2)">Continue: Estimate →</button>
           </div>
         </div>
@@ -1292,7 +1329,7 @@ function navBack(){
 
 // ── DASHBOARD ──────────────────────────────────────────────────────────
 function refreshDash(){
-  const qs=state.quotes;
+  const qs=state.quotes.filter(q=>!q.archived);
   const pipeline=qs.filter(q=>q.status==='Pipeline').reduce((s,q)=>s+(q.total||0),0);
   const approved=qs.filter(q=>q.status==='Approved').reduce((s,q)=>s+(q.total||0),0);
   const fulfilled=qs.filter(q=>q.status==='Fulfilled').reduce((s,q)=>s+(q.total||0),0);
@@ -1330,7 +1367,7 @@ function refreshDash(){
 
 function renderClientDash(clientId){
   const c=getAllClients()[clientId]||{};
-  const qs=state.quotes.filter(q=>q.client===c.name);
+  const qs=state.quotes.filter(q=>q.client===c.name&&!q.archived);
   const filtered=clientStatusFilter?qs.filter(q=>q.status===clientStatusFilter):qs;
 
   const pipeline=qs.filter(q=>q.status==='Pipeline').reduce((s,q)=>s+(q.total||0),0);
@@ -1358,7 +1395,7 @@ function filterClientStatus(status, el){
 
 // ── ALL QUOTES ─────────────────────────────────────────────────────────
 function renderAllQuotes(){
-  let qs=state.quotes;
+  let qs=showArchived?state.quotes:state.quotes.filter(q=>!q.archived);
   if(quotesFilter) qs=qs.filter(q=>(q.client+q.title+q.num).toLowerCase().includes(quotesFilter.toLowerCase()));
   if(quotesStatusFilter) qs=qs.filter(q=>q.status===quotesStatusFilter);
   document.getElementById('quotes-sub').textContent=qs.length+' quote'+(qs.length!==1?'s':'');
@@ -1369,6 +1406,17 @@ function filterStatus(v){ quotesStatusFilter=v; renderAllQuotes(); }
 
 function quoteRowHTML(q){
   const badges={Pipeline:'badge-pipeline',Approved:'badge-approved',Fulfilled:'badge-fulfilled'};
+  if(q.archived) return`<div class="quote-row" style="opacity:0.5;background:var(--surface2)" onclick="openQuote('${q.id}')">
+    <div class="q-num">${q.num}</div>
+    <div class="q-client">${q.client}</div>
+    <div class="q-title">${q.title||'—'} <span style="font-size:11px;color:var(--text4);font-weight:400">(archived)</span></div>
+    <span class="badge" style="background:var(--surface3);color:var(--text4)">Archived</span>
+    <div class="q-amount" style="color:var(--text3)">${fmt(q.total||0)}</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="q-date">${q.date||''}</div>
+      <button onclick="event.stopPropagation();restoreQuote('${q.id}')" style="font-size:11px;color:var(--accent);background:var(--accent-muted);border:1px solid var(--accent-border);border-radius:var(--r-xs);padding:2px 8px;cursor:pointer;font-family:var(--font-body);white-space:nowrap">Restore</button>
+    </div>
+  </div>`;
   return`<div class="quote-row" onclick="openQuote('${q.id}')">
     <div class="q-num">${q.num}</div>
     <div class="q-client">${q.client}</div>
