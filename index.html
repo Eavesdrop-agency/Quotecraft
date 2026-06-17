@@ -703,6 +703,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
               <option value="Pipeline">Pipeline</option>
               <option value="Approved">Approved</option>
               <option value="Fulfilled">Fulfilled</option>
+              <option value="Archived">Archived</option>
             </select>
           </div>
           <div id="all-quotes-list"></div>
@@ -1358,7 +1359,7 @@ function filterClientStatus(status, el){
 
 // ── ALL QUOTES ─────────────────────────────────────────────────────────
 function renderAllQuotes(){
-  let qs=showArchived?state.quotes:state.quotes.filter(q=>!q.archived);
+  let qs=quotesStatusFilter==='Archived'?state.quotes.filter(q=>q.archived):state.quotes.filter(q=>!q.archived);
   if(quotesFilter) qs=qs.filter(q=>(q.client+q.title+q.num).toLowerCase().includes(quotesFilter.toLowerCase()));
   if(quotesStatusFilter) qs=qs.filter(q=>q.status===quotesStatusFilter);
   document.getElementById('quotes-sub').textContent=qs.length+' quote'+(qs.length!==1?'s':'');
@@ -2367,6 +2368,49 @@ function maybeStartTour(){
   }
 }
 
+
+// ── ARCHIVE / RESTORE ─────────────────────────────────────────────────
+let showArchived = false;
+
+function archiveQuoteById(id){
+  if(!confirm('Archive this quote? It will be hidden from your pipeline but can be restored from All Quotes.')) return;
+  const idx=state.quotes.findIndex(x=>x.id===id);
+  if(idx>=0){ state.quotes[idx].archived=true; saveState(); refreshDash(); renderAllQuotes(); toast('Quote archived'); }
+}
+
+function archiveQuote(){
+  if(!state.currentQuote) return;
+  if(!confirm('Archive this quote? It will be hidden from your pipeline but can be restored from All Quotes.')) return;
+  const q=state.currentQuote;
+  const idx=state.quotes.findIndex(x=>x.id===q.id);
+  if(idx>=0){
+    state.quotes[idx].archived=true;
+    saveState();
+    toast('Quote archived');
+    refreshDash();
+    if(q.clientId) navClient(q.clientId, document.getElementById('nav-'+q.clientId));
+    else navTo('quotes', document.getElementById('nav-quotes'));
+  } else {
+    navBack();
+  }
+}
+
+function restoreQuote(id){
+  const idx=state.quotes.findIndex(x=>x.id===id);
+  if(idx>=0){ state.quotes[idx].archived=false; saveState(); renderAllQuotes(); toast('Quote restored'); }
+}
+
+function toggleShowArchived(){
+  showArchived=!showArchived;
+  const btn=document.getElementById('show-archived-btn');
+  if(btn){
+    btn.textContent=showArchived?'Hide archived':'Show archived';
+    btn.style.color=showArchived?'var(--accent)':'var(--text3)';
+    btn.style.borderColor=showArchived?'var(--accent-border)':'var(--border3)';
+    btn.style.background=showArchived?'var(--accent-muted)':'var(--surface)';
+  }
+  renderAllQuotes();
+}
 </script>
 
 <!-- ADD CLIENT MODAL -->
